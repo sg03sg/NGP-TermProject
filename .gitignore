@@ -1,0 +1,67 @@
+## Visual Studio C/C++ (Win32) 프로젝트 - 빌드 산출물 및 사용자 설정 제외
+
+# Visual Studio 사용자별 캐시 / IDE 상태
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.opendb
+*.vsidx
+
+# 빌드 출력 디렉터리
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bin/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+ipch/
+
+# 컴파일/링크 중간 산출물
+*.obj
+*.o
+*.lib
+*.a
+*.exp
+*.ilk
+*.idb
+*.pdb
+*.pch
+*.res
+*.tlog
+*.tlb
+*.tli
+*.tlh
+*.ipdb
+*.iobj
+*.recipe
+*.lastbuildstate
+*.unsuccessfulbuild
+*.aps
+*.ncb
+*.sdf
+*.opensdf
+*.cachefile
+
+# 실행 파일 / 동적 라이브러리
+*.exe
+*.dll
+
+# 기타
+*.log
+*.tmp
+*.bak
+*.cache
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
