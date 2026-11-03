@@ -428,6 +428,38 @@ void InfernoAttack(int stageIdx) {
     }
 }
 
+// 인페르노 효과의 비활성화와 수명 감소를 처리한다. (이전에는 그리기 코드 안에서 처리하던 부분)
+void UpdateInfernoEffects(int stageIdx) {
+    for (int i = 0; i < infernoEffectCount; i++) {
+        if (!infernoEffects[i].active) continue;
+
+        int towerId = infernoEffects[i].sourceTowerId;
+        if (!infernos[stageIdx][towerId].isAttacking) {
+            infernoEffects[i].active = FALSE;
+            continue;
+        }
+
+        int tidx = infernoEffects[i].targetIndex;
+        BOOL isArcher = infernoEffects[i].isArcher;
+        BOOL isGiant = infernoEffects[i].isGiant;
+
+        BOOL targetValid =
+            (isArcher && tidx < archerCount) ||
+            (!isArcher && !isGiant && tidx < barbarianCount) ||
+            (!isArcher && isGiant && tidx < giantsCount);
+        if (!targetValid) {
+            infernoEffects[i].active = FALSE;
+            continue;
+        }
+
+        infernoEffects[i].life--;
+        if (infernoEffects[i].life <= 0) {
+            infernoEffects[i] = infernoEffects[--infernoEffectCount];
+            i--;
+        }
+    }
+}
+
 void UpdateTowerCooldowns(int stageIdx)
 {
     // [0] 타워 공격 쿨다운 감소 - 옮겨야함 

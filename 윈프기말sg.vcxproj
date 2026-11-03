@@ -133,10 +133,13 @@
   <ItemGroup>
     <ClCompile Include="BattleLogic.c" />
     <ClCompile Include="coc.c" />
+    <ClCompile Include="Renderer.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BattleLogic.h" />
+    <ClInclude Include="RendererGlobals.h" />
     <ClInclude Include="GameTypes.h" />
+    <ClInclude Include="Renderer.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

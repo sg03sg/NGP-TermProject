@@ -8,6 +8,8 @@ void UpdateUnit(Unit* u, tower* cannons, tower* mortars, InfernoTower* infernos,
 
 void InfernoAttack(int stageIdx);
 
+void UpdateInfernoEffects(int stageIdx);
+
 void UpdateTowerCooldowns(int stageIdx);
 
 void RemoveDeadUnits(void);
