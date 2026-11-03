@@ -1,0 +1,974 @@
+#include "BattleLogic.h"
+#include <math.h>
+#include <tchar.h>
+
+// 기존 coc.c의 전역 상태를 참조한다. 실제 정의는 coc.c 한 곳에 유지
+// 이후 전투 상태를 객체로 묶을 때 이 의존성을 함께 옮긴다.
+extern BOOL archerUnlocked;
+extern BOOL giantUnlocked;
+
+extern BOOL gameend;
+extern BOOL victory;
+extern BOOL starEarned[3];
+extern int starCount;
+
+extern TCHAR timeStr[16];
+
+extern tower villageking;
+extern int tileWidth;
+extern int tileHeight;
+extern int towercount[3];
+extern int unitRate;
+extern Unit barbarians[MAX_UNITS];
+extern int barbarianCount;
+extern Unit archers[MAX_UNITS];
+extern int archerCount;
+extern Unit giants[MAX_UNITS];
+extern int giantsCount;
+extern InfernoEffect infernoEffects[50];
+extern int infernoEffectCount;
+extern InfernoTower infernos[3][MAX_TOWER];
+extern int infernoCount[3];
+extern tower cannons[3][MAX_TOWER];
+extern int cannonCount[3];
+extern tower mortars[3][MAX_TOWER];
+extern int mortarCount[3];
+extern ArrowEffect* arrowEffects;
+extern int arrowEffectCount;
+extern shot cannonShots[MAX_EFFECTS];
+extern int cannonShotCount;
+extern int boardSize;
+extern int Stagetime;
+extern int mana;
+extern int earn_star[3];
+extern int naturaltowercount[3];
+
+
+// 전투 조건(Update에 해당) --------------------------------------------------------------------------------------------------------------------------------------
+// 기존 화살 생성 함수를 사용한다. 투사체 갱신은 아직 coc.c에 남아 있다.
+void AddArrowEffect(ArrowEffect effect);
+
+void UpdateUnit(Unit* u, tower* cannons, tower* mortars, InfernoTower* infernos, int infernoCount, int mortarCount, int cannonCount, BOOL isRanged, int stageIdx) {
+    if (u->hp <= 0) return;
+
+    // 타겟 필요성 검사
+    BOOL needRetarget = !u->hasTarget || u->targetIndex < 0 || u->targetIndex >= cannonCount ||(u->targetIndex != -1 && (!cannons[u->targetIndex].active || !mortars[u->targetIndex].active || !infernos[u->targetIndex].active));
+
+    // 타겟 재설정
+    if (needRetarget) {
+        int minDist = 999999;
+        BOOL foundTarget = FALSE;
+
+        for (int j = 0; j < cannonCount; j++) {
+            if (!cannons[j].active) continue;
+            int dx = cannons[j].x - u->x;
+            int dy = cannons[j].y - u->y;
+            int dist = dx * dx + dy * dy;
+            if (dist < minDist) {
+                minDist = dist;
+                u->targetX = cannons[j].x;
+                u->targetY = cannons[j].y;
+                u-> targetIndex = j;
+                u->towerindex = 1;
+                foundTarget = TRUE;
+            }
+        }
+
+        for (int j = 0; j < mortarCount; j++) {
+            if (!mortars[j].active) continue;
+            int dx = mortars[j].x - u->x;
+            int dy = mortars[j].y - u->y;
+            int dist = dx * dx + dy * dy;
+            if (dist < minDist) {
+                minDist = dist;
+                u->targetX = mortars[j].x;
+                u->targetY = mortars[j].y;
+                u->targetIndex = j;
+                u->towerindex = -2;
+                foundTarget = TRUE;
+            }
+        }
+
+        for (int j = 0; j < infernoCount; j++) {
+            if (!infernos[j].active) continue;
+            int dx = infernos[j].x - u->x;
+            int dy = infernos[j].y - u->y;
+            int dist = dx * dx + dy * dy;
+            if (dist < minDist) {
+                minDist = dist;
+                u->targetX = infernos[j].x;
+                u->targetY = infernos[j].y;
+                u->targetIndex = j;
+                u->towerindex = -3;
+                foundTarget = TRUE;
+            }
+        }
+
+
+        if (villageking.active) {
+            int dx = villageking.x - u->x;
+            int dy = villageking.y - u->y;
+            int dist = dx * dx + dy * dy;
+            if (dist < minDist) {
+                minDist = dist;
+                u->targetX = villageking.x;
+                u->targetY = villageking.y;
+                u->towerindex = -1;
+                foundTarget = TRUE;
+            }
+        }
+
+        if (!foundTarget) return;
+
+        u->hasTarget = TRUE;
+    }
+
+    // 이동
+    int dx = (u->targetX + 32) - (u->x + tileWidth / 2);
+    int dy = (u->targetY + 32) - (u->y + tileHeight / 2);
+    float dist = sqrtf(dx * dx + dy * dy);
+    if (dist > u->range) {
+        u->x += (int)(dx / dist * u->speed);
+        u->y += (int)(dy / dist * u->speed);
+        return; // 아직 도달하지 않았으면 이동만 하고 끝
+    }
+
+    // 공격 쿨타임 체크
+    if (u->attackCooldown > 0) {
+        u->attackCooldown--;
+        return;
+    }
+
+    // 공격 실행
+    if (u->towerindex == -1) {
+        // 마을회관 공격
+        if (!villageking.active) return;
+
+        int pdx = (u->x + tileWidth / 2) - (villageking.x + 32);
+        int pdy = (u->y + tileHeight / 2) - (villageking.y + 32);
+        float attackDist = sqrtf(pdx * pdx + pdy * pdy);
+
+        if (attackDist < u->range) {
+            if (isRanged) {
+                float startX = u->x + tileWidth / 2;
+                float startY = u->y + tileHeight / 2;
+                float endX = villageking.x + 32;
+                float endY = villageking.y + 32;
+                float vx = endX - startX;
+                float vy = endY - startY;
+                float len = sqrtf(vx * vx + vy * vy);
+                float speed = 10.0f;
+                ArrowEffect effect = {
+                    startX, startY, vx / len * speed, vy / len * speed,
+                    endX, endY, 60, TRUE, u->atk, 0,-1
+                };
+                AddArrowEffect(effect);
+            }
+            else {
+                villageking.hp -= u->atk;
+                if (villageking.hp <= 0) {
+                    villageking.active = FALSE;
+                    villageking.hp = 0;
+                }
+            }
+            u->attackCooldown = 10 + unitRate;
+        }
+
+    }
+    else if (u->towerindex == -2)
+    {
+        // 박격포 공격
+        tower* c = &mortars[u->targetIndex];
+        if (!c->active) return;
+
+        int pdx = (u->x + tileWidth / 2) - (c->x + 32);
+        int pdy = (u->y + tileHeight / 2) - (c->y + 32);
+        float attackDist = sqrtf(pdx * pdx + pdy * pdy);
+
+        if (attackDist < u->range) {
+            if (isRanged) {
+                float startX = u->x + tileWidth / 2;
+                float startY = u->y + tileHeight / 2;
+                float endX = c->x + 32;
+                float endY = c->y + 32;
+                float vx = endX - startX;
+                float vy = endY - startY;
+                float len = sqrtf(vx * vx + vy * vy);
+                float speed = 10.0f;
+                ArrowEffect effect = {
+                    startX, startY, vx / len * speed, vy / len * speed,
+                    endX, endY, 60, TRUE, u->atk, u->targetIndex,-2
+                };
+                AddArrowEffect(effect);
+            }
+            else {
+                c->hp -= u->atk;
+                if (c->hp <= 0) {
+                    c->active = FALSE;
+                    c->hp = 0;
+                    for (int i = 0; i < 3; i++) towercount[i]--;
+                }
+            }
+            u->attackCooldown = 10 + unitRate;
+        }
+    }
+
+    else if (u->towerindex == -3)
+    {
+        // 인페 공격
+        tower* c = &infernos[u->targetIndex];
+        if (!c->active) return;
+
+        int pdx = (u->x + tileWidth / 2) - (c->x + 32);
+        int pdy = (u->y + tileHeight / 2) - (c->y + 32);
+        float attackDist = sqrtf(pdx * pdx + pdy * pdy);
+
+        if (attackDist < u->range) {
+            if (isRanged) {
+                float startX = u->x + tileWidth / 2;
+                float startY = u->y + tileHeight / 2;
+                float endX = c->x + 32;
+                float endY = c->y + 32;
+                float vx = endX - startX;
+                float vy = endY - startY;
+                float len = sqrtf(vx * vx + vy * vy);
+                float speed = 10.0f;
+                ArrowEffect effect = {
+                    startX, startY, vx / len * speed, vy / len * speed,
+                    endX, endY, 60, TRUE, u->atk, u->targetIndex,-3
+                };
+                AddArrowEffect(effect);
+            }
+            else {
+                c->hp -= u->atk;
+                if (c->hp <= 0) {
+                    c->active = FALSE;
+                    c->hp = 0;
+                    for (int i = 0; i < 3; i++) towercount[i]--;
+                }
+            }
+            u->attackCooldown = 10 + unitRate;
+        }
+    }
+    else {
+        // 대포 공격
+        tower* c = &cannons[u->targetIndex];
+        if (!c->active) return;
+
+        int pdx = (u->x + tileWidth / 2) - (c->x + 32);
+        int pdy = (u->y + tileHeight / 2) - (c->y + 32);
+        float attackDist = sqrtf(pdx * pdx + pdy * pdy);
+
+        if (attackDist < u->range) {
+            if (isRanged) {
+                float startX = u->x + tileWidth / 2;
+                float startY = u->y + tileHeight / 2;
+                float endX = c->x + 32;
+                float endY = c->y + 32;
+                float vx = endX - startX;
+                float vy = endY - startY;
+                float len = sqrtf(vx * vx + vy * vy);
+                float speed = 10.0f;
+                ArrowEffect effect = {
+                    startX, startY, vx / len * speed, vy / len * speed,
+                    endX, endY, 60, TRUE, u->atk, u->targetIndex,0
+                };
+                AddArrowEffect(effect);
+            }
+            else {
+                c->hp -= u->atk;
+                if (c->hp <= 0) {
+                    c->active = FALSE;
+                    c->hp = 0;
+                    for (int i = 0; i < 3; i++) towercount[i]--;
+                }
+            }
+            u->attackCooldown = 10 + unitRate;
+        }
+    }
+}
+
+void InfernoAttack(int stageIdx) {
+    BOOL infernoTargetUsed[MAX_UNITS * 3] = { FALSE };
+
+    for (int i = 0; i < infernoCount[stageIdx]; i++) {
+        InfernoTower* t = &infernos[stageIdx][i];
+        if (!t->active) continue;
+
+        if (t->attackCooldown > 0) {
+            t->attackCooldown--;
+            continue;
+        }
+
+        BOOL valid = FALSE;
+        int tx = 0, ty = 0;
+
+        // 현재 타겟 유효성 검사
+        if (t->isAttacking) {
+            Unit* target = NULL;
+            int idx = t->targetIndex;
+
+            if (t->isTargetArcher && idx < archerCount)
+                target = &archers[idx];
+            else if (!t->isTargetArcher && idx < barbarianCount)
+                target = &barbarians[idx];
+            else if (!t->isTargetArcher && idx < giantsCount)
+                target = &giants[idx];
+
+            if (target && target->hp > 0) {
+                float dx = (target->x + tileWidth / 2) - (t->x + 32);
+                float dy = (target->y + tileHeight / 2) - (t->y + 32);
+                float dist = sqrtf(dx * dx + dy * dy);
+
+                if (dist < 50) {
+                    tx = target->x + tileWidth / 2;
+                    ty = target->y + tileHeight / 2;
+                    valid = TRUE;
+                }
+            }
+        }
+
+        // 타겟이 무효하면 리셋
+        if (!valid) {
+            t->isAttacking = FALSE;
+            t->targetIndex = -1;
+        }
+
+        // 새 타겟 탐색
+        if (!t->isAttacking) {
+            float minDist = 999999.0f;
+            int bestIdx = -1;
+            BOOL isArcher = FALSE, isGiant = FALSE;
+
+            for (int j = 0; j < barbarianCount + archerCount + giantsCount; j++) {
+                BOOL currIsArcher = (j >= barbarianCount && j < barbarianCount + archerCount);
+                BOOL currIsGiant = (j >= barbarianCount + archerCount);
+
+                if (infernoTargetUsed[j]) continue; // 다른 인페르노가 이미 타겟팅한 유닛이면 건너뜀
+
+                Unit* target = currIsArcher ? &archers[j - barbarianCount] :
+                    (currIsGiant ? &giants[j - barbarianCount - archerCount] : &barbarians[j]);
+
+                if (target->hp <= 0) continue;
+
+                float dx = (target->x + tileWidth / 2) - (t->x + 32);
+                float dy = (target->y + tileHeight / 2) - (t->y + 32);
+                float dist = sqrtf(dx * dx + dy * dy);
+
+                if (dist < 50 && dist < minDist) {
+                    minDist = dist;
+                    bestIdx = j;
+                    isArcher = currIsArcher;
+                    isGiant = currIsGiant;
+                }
+            }
+
+            if (bestIdx != -1) {
+                infernoTargetUsed[bestIdx] = TRUE;
+
+                t->isAttacking = TRUE;
+                t->isTargetArcher = isArcher;
+                t->targetIndex = isArcher ? bestIdx - barbarianCount :
+                    (isGiant ? bestIdx - barbarianCount - archerCount : bestIdx);
+
+                Unit* target = isArcher ? &archers[t->targetIndex] :
+                    (isGiant ? &giants[t->targetIndex] : &barbarians[t->targetIndex]);
+
+                tx = target->x + tileWidth / 2;
+                ty = target->y + tileHeight / 2;
+
+                // 중복 이펙트 방지
+                BOOL exists = FALSE;
+                for (int k = 0; k < infernoEffectCount; k++) {
+                    if (infernoEffects[k].active &&
+                        infernoEffects[k].sourceTowerId == i) {
+                        exists = TRUE;
+                        break;
+                    }
+                }
+
+                if (!exists && infernoEffectCount < 50) {
+                    float sx = t->x + 32;
+                    float sy = t->y + 32;
+                    float dx = tx - sx;
+                    float dy = ty - sy;
+                    float len = sqrtf(dx * dx + dy * dy);
+
+                    infernoEffects[infernoEffectCount++] = (InfernoEffect){
+                        sx, sy, dx / len, dy / len,
+                        999, TRUE,
+                        t->targetIndex,
+                        isArcher,
+                        isGiant,
+                        i
+                    };
+                }
+                t->attackCooldown = 1;
+                valid = TRUE;
+            }
+        }
+
+        // 데미지 처리
+        if (t->isAttacking && valid) {
+            Unit* target = NULL;
+            if (t->isTargetArcher && t->targetIndex < archerCount)
+                target = &archers[t->targetIndex];
+            else if (!t->isTargetArcher && t->targetIndex < barbarianCount)
+                target = &barbarians[t->targetIndex];
+            else if (!t->isTargetArcher && t->targetIndex < giantsCount)
+                target = &giants[t->targetIndex];
+
+            if (target && target->hp > 0) {
+                int damage = (int)(target->maxHp * t->damageRatio);
+                if (damage < 1) damage = 1;
+                target->hp -= damage;
+                t->attackCooldown = 1;
+            }
+        }
+    }
+}
+
+void UpdateTowerCooldowns(int stageIdx)
+{
+    // [0] 타워 공격 쿨다운 감소 - 옮겨야함 
+    for (int i = 0; i < cannonCount[stageIdx]; i++) {
+        if (cannons[stageIdx][i].attackCooldown > 0)
+            cannons[stageIdx][i].attackCooldown--;
+    }
+}
+// RemoveDeadEntities()에 해당 -----------------------------------------------------------------------
+void RemoveDeadUnits(void)
+{
+    // 여기서 부터 사망 처리 옮겨야함 
+            // [1] 바바리안 제거 (hp <= 0) 
+    for (int i = 0; i < barbarianCount; ) {
+        if (barbarians[i].hp <= 0) {
+            for (int j = i; j < barbarianCount - 1; j++) {
+                barbarians[j] = barbarians[j + 1];
+            }
+            barbarianCount--;
+        }
+        else {
+            i++;
+        }
+    }
+
+    // [2] 아처 제거 (hp <= 0)
+    for (int i = 0; i < archerCount; ) {
+        if (archers[i].hp <= 0) {
+            for (int j = i; j < archerCount - 1; j++) {
+                archers[j] = archers[j + 1];
+            }
+            archerCount--;
+        }
+        else {
+            i++;
+        }
+    }
+
+    //자이언트 제거 hp 0 아래일때
+    for (int i = 0; i < giantsCount; ) {
+        if (giants[i].hp <= 0) {
+            for (int j = i; j < giantsCount - 1; j++) {
+                giants[j] = giants[j + 1];
+            }
+            giantsCount--;
+        }
+        else {
+            i++;
+        }
+    }
+}
+
+void UpdateUnits(int stageIdx)
+{
+    // 이동 공격 처리 옮겨야함 
+           //바바 이동 공격
+    for (int i = 0; i < barbarianCount; i++)
+        UpdateUnit(&barbarians[i], cannons[stageIdx], mortars[stageIdx], infernos[stageIdx], infernoCount[stageIdx], mortarCount[stageIdx], cannonCount[stageIdx], FALSE, stageIdx);
+
+    //아처 이동 공격
+    for (int i = 0; i < archerCount; i++)
+        UpdateUnit(&archers[i], cannons[stageIdx], mortars[stageIdx], infernos[stageIdx], infernoCount[stageIdx], mortarCount[stageIdx], cannonCount[stageIdx], TRUE, stageIdx);
+
+    //자이언트 //
+    for (int i = 0; i < giantsCount; i++)
+        UpdateUnit(&giants[i], cannons[stageIdx], mortars[stageIdx], infernos[stageIdx], infernoCount[stageIdx], mortarCount[stageIdx], cannonCount[stageIdx], FALSE, stageIdx);
+    // 이동 공격 처리 끝 
+}
+
+void UpdateArrows(int stageIdx)
+{
+    // 여기도 옮겨야 함 
+            // 화살 이펙트 이동 및 충돌 판정
+    for (int i = 0; i < arrowEffectCount; ) {
+        ArrowEffect* arrow = &arrowEffects[i];
+        if (!arrow->active) {
+            i++;
+            continue;
+        }
+
+        arrow->x += arrow->vx;
+        arrow->y += arrow->vy;
+        arrow->life--;
+
+        float dx = arrow->x - arrow->targetX;
+        float dy = arrow->y - arrow->targetY;
+        float dist = sqrtf(dx * dx + dy * dy);
+
+        if (dist < 10.0f || arrow->life <= 0) {
+
+            if (arrow->towerindex == -1) {
+                // 마을회관을 타겟한 경우
+                tower* v = &villageking;
+                if (v->active) {
+                    v->hp -= arrow->damage;
+                    if (v->hp <= 0) {
+                        v->hp = 0;
+                        v->active = FALSE;
+                        // 마을회관 파괴 시 처리 추가 가능
+                    }
+                }
+            }
+
+            else if (arrow->towerindex == -2)
+            {
+                tower* c = &mortars[stageIdx][arrow->targetIndex];
+                if (c->active) {
+                    c->hp -= arrow->damage;
+                    if (c->hp <= 0) {
+                        c->hp = 0;
+                        c->active = FALSE;
+                        towercount[stageIdx]--;
+                    }
+                }
+            }
+
+            else if (arrow->towerindex == -3)
+            {
+                tower* c = &infernos[stageIdx][arrow->targetIndex];
+                if (c->active) {
+                    c->hp -= arrow->damage;
+                    if (c->hp <= 0) {
+                        c->hp = 0;
+                        c->active = FALSE;
+                        towercount[stageIdx]--;
+                    }
+                }
+            }
+
+            else
+            {
+                tower* c = &cannons[stageIdx][arrow->targetIndex];
+                if (c->active) {
+                    c->hp -= arrow->damage;
+                    if (c->hp <= 0) {
+                        c->hp = 0;
+                        c->active = FALSE;
+                        towercount[stageIdx]--;
+                    }
+                }
+            }
+
+            arrowEffects[i] = arrowEffects[arrowEffectCount - 1];
+            arrowEffectCount--;
+        }
+        else {
+            i++;
+        }
+    }
+    // 여기까지 
+}
+void UpdateCannonAttacks(int stageIdx)
+{
+    // 여기도 옮기기 
+            // [8] 대포 -> 범위 내 유닛에게 대포알 발사
+    for (int i = 0; i < cannonCount[stageIdx]; i++) {
+        tower* c = &cannons[stageIdx][i];
+        if (!c->active) continue;
+
+        // 가장 가까운 유닛 탐색
+        float minDist = 999999.0f;
+        int targetIndex = -1;
+        int u_type = -1;
+
+        // 바바리안 검사
+        for (int j = 0; j < barbarianCount; j++) {
+            float dx = (barbarians[j].x + tileWidth / 2) - (c->x + tileWidth);
+            float dy = (barbarians[j].y + tileHeight / 2) - (c->y + tileWidth);
+            float dist = sqrtf(dx * dx + dy * dy);
+            if (dist < 100 && dist < minDist) {
+                minDist = dist;
+                targetIndex = j;
+                u_type = 0;
+            }
+        }
+
+        // 아처 검사
+        for (int j = 0; j < archerCount; j++) {
+            float dx = (archers[j].x + tileWidth / 2) - (c->x + tileWidth);
+            float dy = (archers[j].y + tileHeight / 2) - (c->y + tileWidth);
+            float dist = sqrtf(dx * dx + dy * dy);
+            if (dist < 100 && dist < minDist) {
+                minDist = dist;
+                targetIndex = j;
+                u_type = 1;
+            }
+        }
+
+        //자이언트 검사
+        for (int j = 0; j < giantsCount; j++) {
+            float dx = (giants[j].x + tileWidth / 2) - (c->x + tileWidth);
+            float dy = (giants[j].y + tileHeight / 2) - (c->y + tileWidth);
+            float dist = sqrtf(dx * dx + dy * dy);
+            if (dist < 100 && dist < minDist) {
+                minDist = dist;
+                targetIndex = j;
+                u_type = 2;
+            }
+        }
+
+        // 유닛 발견 시 대포알 발사
+        if (targetIndex != -1 && c->attackCooldown == 0) {
+            shot shot;
+            shot.x = c->x + 32;
+            shot.y = c->y + 32;
+            shot.targetIndex = targetIndex;
+            shot.unittype = u_type;
+            shot.active = TRUE;
+            shot.life = 60;
+            shot.isMortarShot = FALSE;
+
+            float tx;
+            float ty;
+            switch (shot.unittype)
+            {
+            case 0:
+                tx = barbarians[shot.targetIndex].x + tileWidth / 2;
+                ty = barbarians[shot.targetIndex].y + tileHeight / 2;
+                break;
+            case 1:
+                tx = archers[shot.targetIndex].x + tileWidth / 2;
+                ty = archers[shot.targetIndex].y + tileHeight / 2;
+
+                break;
+            case 2:
+                tx = giants[shot.targetIndex].x + tileWidth / 2;
+                ty = giants[shot.targetIndex].y + tileHeight / 2;
+
+                break;
+            }
+
+            float dx = tx - shot.x;
+            float dy = ty - shot.y;
+            float len = sqrtf(dx * dx + dy * dy);
+            float speed = 7.0f;
+
+            shot.vx = dx / len * speed;
+            shot.vy = dy / len * speed;
+
+            if (cannonShotCount < MAX_EFFECTS) {
+                cannonShots[cannonShotCount++] = shot;
+            }
+            c->attackCooldown = 15;
+        }
+    }
+    // 여기까지 
+}
+void UpdateCannonShots(void)
+{
+    // 여기도 옮겨야함 
+            //대포알
+    for (int i = 0; i < cannonShotCount;) {
+        shot* p = &cannonShots[i];
+        if (!p->active || p->isMortarShot) {
+            i++;
+            continue;
+        }
+
+        p->x += p->vx;
+        p->y += p->vy;
+        p->life--;
+
+        // 타겟 유닛이 죽었거나 잘못된 인덱스면 탄 제거
+        if (p->unittype == 0 && (p->targetIndex >= barbarianCount || barbarians[p->targetIndex].hp <= 0)) {
+            cannonShots[i] = cannonShots[--cannonShotCount];
+            continue;
+        }
+        if (p->unittype == 1 && (p->targetIndex >= archerCount || archers[p->targetIndex].hp <= 0)) {
+            cannonShots[i] = cannonShots[--cannonShotCount];
+            continue;
+        }
+        if (p->unittype == 2 && (p->targetIndex >= giantsCount || giants[p->targetIndex].hp <= 0)) {
+            cannonShots[i] = cannonShots[--cannonShotCount];
+            continue;
+        }
+
+        //  현재 위치로 충돌 체크
+        float tx = 0, ty = 0;
+        if (p->unittype == 0) {
+            tx = barbarians[p->targetIndex].x + tileWidth / 2;
+            ty = barbarians[p->targetIndex].y + tileHeight / 2;
+        }
+        else if (p->unittype == 1) {
+            tx = archers[p->targetIndex].x + tileWidth / 2;
+            ty = archers[p->targetIndex].y + tileHeight / 2;
+        }
+        else if (p->unittype == 2) {
+            tx = giants[p->targetIndex].x + tileWidth / 2;
+            ty = giants[p->targetIndex].y + tileHeight / 2;
+        }
+
+        float dx = p->x - tx;
+        float dy = p->y - ty;
+        float dist = sqrtf(dx * dx + dy * dy);
+        int cannondamage = 50;
+
+        if (dist < 10.0f || p->life <= 0) {
+            if (p->unittype == 0)
+                barbarians[p->targetIndex].hp -= cannondamage;
+            else if (p->unittype == 1)
+                archers[p->targetIndex].hp -= cannondamage;
+            else if (p->unittype == 2)
+                giants[p->targetIndex].hp -= cannondamage;
+
+            cannonShots[i] = cannonShots[--cannonShotCount];
+            continue;
+        }
+
+        i++;  // 다음 탄으로
+    }
+    // 여기까지 
+}
+void UpdateMortarAttacks(int stageIdx)
+{
+    // 여기도 옮겨야함 
+            //박격포
+    for (int i = 0; i < mortarCount[stageIdx]; i++) {
+        tower* m = &mortars[stageIdx][i];
+        if (!m->active) continue;
+        if (m->attackCooldown > 0) {
+            m->attackCooldown--;
+            continue;
+        }
+
+        float maxDist = -1.0f;
+        int targetIndex = -1;
+        int u_type = -1;
+        float tx = 0, ty = 0;
+
+        // 바바리안
+        for (int j = 0; j < barbarianCount; j++) {
+            if (barbarians[j].hp <= 0) continue;
+
+            float dx = (barbarians[j].x + tileWidth / 2) - (m->x + tileWidth / 2);
+            float dy = (barbarians[j].y + tileHeight / 2) - (m->y + tileHeight / 2);
+            float dist = sqrtf(dx * dx + dy * dy);
+            if (dist > 60 && dist > maxDist && dist <= m->range) {
+                maxDist = dist;
+                targetIndex = j;
+                u_type = 0;
+                tx = barbarians[j].x + tileWidth / 2;
+                ty = barbarians[j].y + tileHeight / 2;
+            }
+        }
+
+        // 아처
+        for (int j = 0; j < archerCount; j++) {
+            if (archers[j].hp <= 0) continue;
+
+            float dx = (archers[j].x + tileWidth / 2) - (m->x + tileWidth / 2);
+            float dy = (archers[j].y + tileHeight / 2) - (m->y + tileHeight / 2);
+            float dist = sqrtf(dx * dx + dy * dy);
+            if (dist > 60 && dist > maxDist && dist <= m->range) {
+                maxDist = dist;
+                targetIndex = j;
+                u_type = 1;
+                tx = archers[j].x + tileWidth / 2;
+                ty = archers[j].y + tileHeight / 2;
+            }
+        }
+
+        // 자이언트
+        for (int j = 0; j < giantsCount; j++) {
+            if (giants[j].hp <= 0) continue;
+
+            float dx = (giants[j].x + tileWidth / 2) - (m->x + tileWidth / 2);
+            float dy = (giants[j].y + tileHeight / 2) - (m->y + tileHeight / 2);
+            float dist = sqrtf(dx * dx + dy * dy);
+            if (dist > 60 && dist > maxDist && dist <= m->range) {
+                maxDist = dist;
+                targetIndex = j;
+                u_type = 2;
+                tx = giants[j].x + tileWidth / 2;
+                ty = giants[j].y + tileHeight / 2;
+            }
+        }
+
+        if (targetIndex != -1 && cannonShotCount < MAX_EFFECTS) {
+            shot s;
+            s.x = m->x + tileWidth / 2;
+            s.y = m->y + tileHeight / 2;
+            s.targetX = (int)tx;
+            s.targetY = (int)ty;
+            s.vx = (tx - s.x) / 30.0f;
+            s.vy = (ty - s.y) / 30.0f;
+            s.life = 30;
+            s.totalLife = 30;
+            s.active = TRUE;
+            s.targetIndex = targetIndex;
+            s.unittype = u_type;
+            s.isMortarShot = TRUE;
+
+            cannonShots[cannonShotCount++] = s;
+            m->attackCooldown = 30;
+        }
+    }
+    // 여기까지 
+}
+void UpdateMortarShots(void)
+{
+    // 여기도 옮겨야함 
+            //박격포 탄
+    for (int i = 0; i < cannonShotCount;) {
+        shot* p = &cannonShots[i];
+        if (!p->active || !p->isMortarShot) {
+            i++;
+            continue;
+        }
+
+        // 포탄 이동
+        p->x += p->vx;
+        p->y += p->vy;
+        p->life--;
+
+        if (p->life <= 0) {
+            float tx = p->targetX;
+            float ty = p->targetY;
+            int mortardamage = 80;
+
+            // 바바리안 전체 검사
+            for (int j = 0; j < barbarianCount; j++) {
+                float bx = barbarians[j].x + tileWidth / 2;
+                float by = barbarians[j].y + tileHeight / 2;
+                float d = sqrtf((bx - tx) * (bx - tx) + (by - ty) * (by - ty));
+                if (d <= 30) {
+                    barbarians[j].hp -= mortardamage;
+                }
+            }
+
+            // 아처 전체 검사
+            for (int j = 0; j < archerCount; j++) {
+                float ax = archers[j].x + tileWidth / 2;
+                float ay = archers[j].y + tileHeight / 2;
+                float d = sqrtf((ax - tx) * (ax - tx) + (ay - ty) * (ay - ty));
+                if (d <= 30) {
+                    archers[j].hp -= mortardamage;
+                }
+            }
+
+            // 자이언트 전체 검사
+            for (int j = 0; j < giantsCount; j++) {
+                float gx = giants[j].x + tileWidth / 2;
+                float gy = giants[j].y + tileHeight / 2;
+                float d = sqrtf((gx - tx) * (gx - tx) + (gy - ty) * (gy - ty));
+                if (d <= 30) {
+                    giants[j].hp -= mortardamage;
+                }
+            }
+
+            cannonShots[i] = cannonShots[--cannonShotCount];
+            continue;
+        }
+
+        i++;
+    }
+}
+//---------------------------------------------------------------------------------------
+
+
+// 시간 감소  ------------------------------------------------------------------
+void UpdateBattleTime(void)
+{
+    Stagetime--;
+   /* if (Stagetime > 0) {
+        Stagetime--;
+    }*/
+}
+// --------------------------------------------------------------------------------------
+
+// 마나, 타이머 초기화(Initialize에 해당) ----------------------------------------------------------
+void InitializeBattle(void)
+{
+    int earn = earn_star[0] + earn_star[1] + earn_star[2];
+
+    if (earn < 3)
+        mana = 100;
+    else if (earn < 6)
+        mana = 110;
+    else
+        mana = 120;
+
+    Stagetime = 180;
+}
+
+// 종료 조건 (CheckResult에 해당)--------------------------------------------------------------
+BOOL CheckStageEnd(int stageIdx)
+{
+    int starPlus = 0;
+
+    if (!villageking.active && !gameend)
+    {
+        gameend = TRUE;
+        victory = TRUE;
+
+        if (!starEarned[stageIdx]) {
+            if (!villageking.active) starPlus = 3;
+            else if (towercount[stageIdx] >= naturaltowercount[stageIdx] * 0.7f) starPlus = 2;
+            else if (towercount[stageIdx] >= naturaltowercount[stageIdx] * 0.4f) starPlus = 1;
+
+
+            if (starPlus > earn_star[stageIdx]) {
+                int delta = starPlus - earn_star[stageIdx];
+                earn_star[stageIdx] = starPlus;
+                starCount += delta;
+
+                if (earn_star[stageIdx] == 3)
+                    starEarned[stageIdx] = TRUE;
+            }
+        }
+    }
+    // 시간판정 
+    else if (_tcscmp(timeStr, TEXT("00:00")) == 0)
+    {
+        gameend = TRUE;
+        victory = FALSE;
+
+        if (starEarned[stageIdx]) return TRUE;
+
+        if (!villageking.active) starPlus = 3;
+        else if (towercount[stageIdx] <= naturaltowercount[stageIdx] * 0.4f) starPlus = 2;
+        else if (towercount[stageIdx] <= naturaltowercount[stageIdx] * 0.7f) starPlus = 1;
+
+
+        if (starPlus > earn_star[stageIdx]) {
+            int delta = starPlus - earn_star[stageIdx];
+            earn_star[stageIdx] = starPlus;
+            starCount += delta;
+
+            if (earn_star[stageIdx] == 3)
+                starEarned[stageIdx] = TRUE;
+        }
+
+    }
+
+    int star = earn_star[0] + earn_star[1] + earn_star[2];
+    if (!archerUnlocked && star >= 3) {
+        archerUnlocked = TRUE;
+    }
+    if (!giantUnlocked && star >= 6) {
+        giantUnlocked = TRUE;
+    }
+
+    return gameend;
+}
