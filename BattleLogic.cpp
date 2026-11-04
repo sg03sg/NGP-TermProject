@@ -216,7 +216,8 @@ void UpdateUnit(Unit* u, tower* cannons, tower* mortars, InfernoTower* infernos,
     else if (u->towerindex == -3)
     {
         // 인페 공격
-        tower* c = &infernos[u->targetIndex];
+        //tower* c = &infernos[u->targetIndex];
+        InfernoTower* c = &infernos[u->targetIndex];
         if (!c->active) return;
 
         int pdx = (u->x + tileWidth / 2) - (c->x + 32);
@@ -394,7 +395,7 @@ void InfernoAttack(int stageIdx) {
                     float dy = ty - sy;
                     float len = sqrtf(dx * dx + dy * dy);
 
-                    infernoEffects[infernoEffectCount++] = (InfernoEffect){
+                    infernoEffects[infernoEffectCount++] = InfernoEffect{
                         sx, sy, dx / len, dy / len,
                         999, TRUE,
                         t->targetIndex,
@@ -578,7 +579,8 @@ void UpdateArrows(int stageIdx)
 
             else if (arrow->towerindex == -3)
             {
-                tower* c = &infernos[stageIdx][arrow->targetIndex];
+                //tower* c = &infernos[stageIdx][arrow->targetIndex];
+                InfernoTower* c = &infernos[stageIdx][arrow->targetIndex];
                 if (c->active) {
                     c->hp -= arrow->damage;
                     if (c->hp <= 0) {
