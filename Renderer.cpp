@@ -19,7 +19,7 @@ static BITMAP bmpStageMap[3];
 static HBITMAP hDoorFrames[5], hMenuBg, hShopMap, hshopbababmp, hshoparcherbmp, hshopgiantbmp;
 static BITMAP bmpDoorFrames[5], bmpMenuBg, bmpShopMap, bmpshopbaba, bmpshoparcher, bmpshopgiant;
 
-static TCHAR* tips[] = {
+static const TCHAR* tips[] = {
     _T("Tip: 전략을 잘 세워 스테이지를 클리어해 보세요."),
     _T("Tip: 클리어가 힘들다면 업그레이드를 활용해 보세요."),
     _T("Tip: 별 3개 도달 시 2스테이지 진입 및 아처 해금입니다."),
@@ -28,97 +28,97 @@ static TCHAR* tips[] = {
 
 // 리소스 로드 / 해제 ----------------------------------------------------------------------------------------------------------------------------------
 BOOL Renderer_Init(HINSTANCE hInst) {
-    hMenuBg = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP24), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hMenuBg = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP24), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hMenuBg) GetObject(hMenuBg, sizeof(BITMAP), &bmpMenuBg);
 
     for (int i = 0; i < 5; i++) {
-        hDoorFrames[i] = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP25 + i), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+        hDoorFrames[i] = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP25 + i), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
         if (hDoorFrames[i]) GetObject(hDoorFrames[i], sizeof(BITMAP), &bmpDoorFrames[i]);
     }
 
-    hshoparcherbmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP32), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hshoparcherbmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP32), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hshoparcherbmp) GetObject(hshoparcherbmp, sizeof(BITMAP), &bmpshoparcher);
 
-    hshopbababmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP33), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hshopbababmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP33), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hshopbababmp) GetObject(hshopbababmp, sizeof(BITMAP), &bmpshopbaba);
 
-    hshopgiantbmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP34), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hshopgiantbmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP34), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hshopgiantbmp) GetObject(hshopgiantbmp, sizeof(BITMAP), &bmpshopgiant);
 
-    hShopMap = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP26), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hShopMap = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP26), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hShopMap) GetObject(hShopMap, sizeof(BITMAP), &bmpShopMap);
 
-    endvbmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP22), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    endvbmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP22), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (endvbmp) GetObject(endvbmp, sizeof(BITMAP), &bmpendv);
 
-    enddbmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP21), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    enddbmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP21), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (enddbmp) GetObject(enddbmp, sizeof(BITMAP), &bmpendd);
 
-    hui0bmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP17), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hui0bmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP17), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hui0bmp) GetObject(hui0bmp, sizeof(BITMAP), &bmpui0);
 
-    hui1bmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP2), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hui1bmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP2), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hui1bmp) GetObject(hui1bmp, sizeof(BITMAP), &bmpui1);
 
-    hui2bmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP7), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hui2bmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP7), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hui2bmp) GetObject(hui2bmp, sizeof(BITMAP), &bmpui2);
 
-    hui3bmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP16), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hui3bmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP16), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hui3bmp) GetObject(hui3bmp, sizeof(BITMAP), &bmpui3);
 
-    hui4bmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP18), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hui4bmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP18), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hui4bmp) GetObject(hui4bmp, sizeof(BITMAP), &bmpui4);
 
-    hui5bmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP19), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hui5bmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP19), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hui5bmp) GetObject(hui5bmp, sizeof(BITMAP), &bmpui5);
 
-    hui6bmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP20), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hui6bmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP20), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hui6bmp) GetObject(hui6bmp, sizeof(BITMAP), &bmpui6);
 
-    hvillagekingBmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP13), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hvillagekingBmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP13), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hvillagekingBmp) GetObject(hvillagekingBmp, sizeof(BITMAP), &bmpvillageking);
 
-    hLogoBmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP41), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hLogoBmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP41), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hLogoBmp) GetObject(hLogoBmp, sizeof(BITMAP), &bmpLogo);
 
     for (int i = 0; i < 3; i++) {
-        hWalkBmp[i] = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP2 + i), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+        hWalkBmp[i] = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP2 + i), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
         if (hWalkBmp[i]) GetObject(hWalkBmp[i], sizeof(BITMAP), &bmpWalk[i]);
 
-        hgiantsbmp[i] = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP14 + i), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+        hgiantsbmp[i] = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP14 + i), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
         if (hgiantsbmp[i]) GetObject(hgiantsbmp[i], sizeof(BITMAP), &bmpgiants[i]);
     }
     for (int i = 0; i < 3; i++) {
-        hRightWalkBmp[i] = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP10 + i), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+        hRightWalkBmp[i] = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP10 + i), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
         if (hRightWalkBmp[i]) GetObject(hRightWalkBmp[i], sizeof(BITMAP), &bmpRightWalk[i]);;
     }
 
     for (int i = 0; i < 3; i++)
     {
-        hArcherBmp[i] = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP35 + i), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+        hArcherBmp[i] = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP35 + i), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
         if (hArcherBmp[i]) GetObject(hArcherBmp[i], sizeof(BITMAP), &aWalk[i]);
 
-        hrightarcherbmp[i] = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP38 + i), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+        hrightarcherbmp[i] = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP38 + i), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
         if (hrightarcherbmp[i]) GetObject(hrightarcherbmp[i], sizeof(BITMAP), &bmprightarcher[i]);
     }
 
-    harrowBmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP8), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    harrowBmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP8), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (harrowBmp) GetObject(harrowBmp, sizeof(BITMAP), &bmpArrow);
 
-    hCannonBmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP5), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hCannonBmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP5), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hCannonBmp) GetObject(hCannonBmp, sizeof(BITMAP), &bmpCannon);
 
-    hmortarbmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP23), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hmortarbmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP23), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hmortarbmp) GetObject(hmortarbmp, sizeof(BITMAP), &bmpmortar);
 
-    hInfernoBmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP31), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hInfernoBmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP31), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hInfernoBmp) GetObject(hInfernoBmp, sizeof(BITMAP), &bmpInferno);
 
-    hcannonBallBmp = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP9), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    hcannonBallBmp = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP9), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hcannonBallBmp) GetObject(hcannonBallBmp, sizeof(BITMAP), &bmpCannonBall);
 
     for (int i = 0; i < 3; i++) {
-        hStageMap[i] = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP1), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+        hStageMap[i] = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP1), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
         if (hStageMap[i]) GetObject(hStageMap[i], sizeof(BITMAP), &bmpStageMap[i]);
     }
 
@@ -200,7 +200,10 @@ static void DrawHealthBar(HDC hDC, int x, int y, int width, int height, int hp, 
 }
 
 static void DrawLoadingScreen(HDC hDC, HDC mDC, int width, int height) {
-    FillRect(mDC, &(RECT){0, 0, width, height}, CreateSolidBrush(RGB(20, 20, 20)));
+    // 배경
+    RECT screenRect{ 0, 0, width, height };
+
+    FillRect(mDC, &screenRect, CreateSolidBrush(RGB(20, 20, 20)));
 
     if (hLogoBmp) {
         HDC memDC = CreateCompatibleDC(hDC);
@@ -212,12 +215,15 @@ static void DrawLoadingScreen(HDC hDC, HDC mDC, int width, int height) {
     int bx = (width - 400) / 2;
     int by = height - 145;
 
-    FillRect(mDC, &(RECT){bx, by, bx + 400, by + 30}, CreateSolidBrush(RGB(60, 60, 60)));
-    FillRect(mDC, &(RECT){bx + 2, by + 2, bx + 2 + (396 * loadingProgress / 100), by + 28}, CreateSolidBrush(RGB(180, 0, 255)));
+    RECT barRect = { bx, by, bx + 400, by + 30 };
+    FillRect(mDC, &barRect, CreateSolidBrush(RGB(60, 60, 60)));
+	RECT frameRect = { bx + 2, by + 2, bx + 2 + (396 * loadingProgress / 100), by + 28 };
+    FillRect(mDC, &frameRect, CreateSolidBrush(RGB(180, 0, 255)));
 
     SetBkMode(mDC, TRANSPARENT);
     SetTextColor(mDC, RGB(255, 255, 255));
-    DrawText(mDC, tips[loadingProgress % 4], -1, &(RECT){0, by + 40, width, by + 80}, DT_CENTER);
+	RECT textRect = { 0, by + 40, width, by + 80 };
+    DrawText(mDC, tips[loadingProgress % 4], -1, &textRect, DT_CENTER);
 }
 
 static void DrawMenuScreen(HDC mDC, int width, int height) {
@@ -491,21 +497,21 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
     SelectObject(paintDC, hui1bmp);
     COLORREF  ui1_back_color = GetPixel(paintDC, 0, 1);
     TransparentBlt(mDC, uis[1].x, uis[1].y, uis[1].length, uis[1].height, paintDC, 0, 0, bmpui1.bmWidth, bmpui1.bmHeight, ui1_back_color);
-    TextOut(mDC, uis[1].x + 25, uis[1].y + uis[1].height - 5, "5", _tcslen("5"));
+    TextOut(mDC, uis[1].x + 25, uis[1].y + uis[1].height - 5, _T("5"), _tcslen(_T("5")));
     MoveToEx(mDC, uis[1].x + 55, uis[1].y, NULL);
     LineTo(mDC, uis[1].x + 55, uis[1].y + uis[1].height);
 
     SelectObject(paintDC, hui2bmp);
     COLORREF  ui2_back_color = GetPixel(paintDC, 0, 1);
     TransparentBlt(mDC, uis[1].x + 60, uis[1].y, uis[1].length, uis[1].height, paintDC, 0, 0, bmpui2.bmWidth, bmpui2.bmHeight, ui2_back_color);
-    TextOut(mDC, uis[1].x + 85, uis[1].y + uis[1].height - 5, "5", _tcslen("5"));
+    TextOut(mDC, uis[1].x + 85, uis[1].y + uis[1].height - 5, _T("5"), _tcslen(_T("5")));
     MoveToEx(mDC, uis[1].x + 115, uis[1].y, NULL);
     LineTo(mDC, uis[1].x + 115, uis[1].y + uis[1].height);
 
     SelectObject(paintDC, hui3bmp);
     COLORREF  ui3_back_color = GetPixel(paintDC, 0, 1);
     TransparentBlt(mDC, uis[1].x + 120, uis[1].y, uis[1].length, uis[1].height, paintDC, 0, 0, bmpui3.bmWidth, bmpui3.bmHeight, ui3_back_color);
-    TCHAR* str = _T("10");
+    const TCHAR* str = _T("10");
     TextOut(mDC, uis[1].x + 145, uis[1].y + uis[1].height - 5, str, _tcslen(str));
 
     int mana_length;
@@ -609,7 +615,7 @@ static void DrawInfernoEffects(HDC mDC, int stageIdx) {
         }
 
         HPEN hPen = CreatePen(PS_SOLID, 4, RGB(255, 253, 126));
-        HPEN oldPen = SelectObject(mDC, hPen);
+        HPEN oldPen = static_cast<HPEN>(SelectObject(mDC, hPen));
 
         MoveToEx(mDC, (int)sx, (int)sy, NULL);
         LineTo(mDC, (int)tx, (int)ty);
@@ -722,7 +728,7 @@ static void Drawtowerrange(HDC hDC, int stageIdx) {
     SelectObject(hDC, hPen);
 
     for (int i = 0; i < infernoCount[stageIdx]; i++) {
-        tower* c = &infernos[stageIdx][i];
+        InfernoTower* c = &infernos[stageIdx][i];
         if (!c->active) continue;
 
         Ellipse(hDC, c->x + tileWidth - 50, c->y + tileWidth - 50, c->x + tileWidth + 50, c->y + tileWidth + 50);

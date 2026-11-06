@@ -18,6 +18,7 @@ LPCTSTR lpszWindowName = L"Window Programming Lab";
 
 
 GameState gameState = STATE_LOADING;
+
 BOOL isLoading = TRUE;
 BOOL showGrid = FALSE;
 BOOL gameend = FALSE;
@@ -98,7 +99,7 @@ RECT doorRects[3] = {
     { 800, 350, 900, 450 }   // 문 3
 };
 
-int targetStages[DOOR_COUNT] = {
+GameState targetStages[DOOR_COUNT] = {
     STATE_STAGE1, STATE_STAGE2, STATE_STAGE3
 };
 int starCount = 0;
@@ -141,29 +142,29 @@ void InitGame(HWND hWnd) {
 
     lstrcpy(timeStr, TEXT("03:00"));
 
-    cannons[0][0] = (tower){ 625, 380, TRUE, 300, 300, 10 };
-    cannons[0][1] = (tower){ 670, 390, TRUE, 300, 300, 10 };
-    cannons[0][2] = (tower){ 655, 420, TRUE, 300, 300, 10 };
-    cannons[0][3] = (tower){ 610, 410, TRUE, 300, 300, 10 };
-    cannons[1][0] = (tower){ 686, 412, TRUE, 300, 300, 10 };
-    cannons[1][1] = (tower){ 640, 445, TRUE, 300, 300, 10 }; //한 칸 y =20 x =30
-    cannons[1][2] = (tower){ 583, 398, TRUE, 300, 300, 10 };
-    cannons[1][3] = (tower){ 645, 366, TRUE, 300, 300, 10 };
-    mortars[1][0] = (tower){ 658, 423, TRUE, 300, 300, 10,200 };
-    mortars[1][1] = (tower){ 613, 378, TRUE, 300, 300, 10,200 };
-    cannons[2][0] = (tower){ 686, 412, TRUE, 300, 300, 10 };
-    cannons[2][1] = (tower){ 640, 445, TRUE, 300, 300, 10 };
-    cannons[2][2] = (tower){ 583, 398, TRUE, 300, 300, 10 };
-    cannons[2][3] = (tower){ 645, 366, TRUE, 300, 300, 10 };
-    mortars[2][0] = (tower){ 658, 423, TRUE, 300, 300, 10,500 };
-    mortars[2][1] = (tower){ 613, 378, TRUE, 300, 300, 10,500 };
-    infernos[2][0] = (InfernoTower){ 659, 378, TRUE, 300, 300, 0, 0.1f, FALSE, -1, FALSE };
-    infernos[2][1] = (InfernoTower){ 610, 410, TRUE, 300, 300, 0, 0.1f, FALSE, -1, FALSE };
-    villageking = (tower){ 642, 392, TRUE, 600, 600 };
+    cannons[0][0] = tower{ 625, 380, TRUE, 300, 300, 10 };
+    cannons[0][1] = tower{ 670, 390, TRUE, 300, 300, 10 };
+    cannons[0][2] = tower{ 655, 420, TRUE, 300, 300, 10 };
+    cannons[0][3] = tower{ 610, 410, TRUE, 300, 300, 10 };
+    cannons[1][0] = tower{ 686, 412, TRUE, 300, 300, 10 };
+    cannons[1][1] = tower{ 640, 445, TRUE, 300, 300, 10 }; //한 칸 y =20 x =30
+    cannons[1][2] = tower{ 583, 398, TRUE, 300, 300, 10 };
+    cannons[1][3] = tower{ 645, 366, TRUE, 300, 300, 10 };
+    mortars[1][0] = tower{ 658, 423, TRUE, 300, 300, 10,200 };
+    mortars[1][1] = tower{ 613, 378, TRUE, 300, 300, 10,200 };
+    cannons[2][0] = tower{ 686, 412, TRUE, 300, 300, 10 };
+    cannons[2][1] = tower{ 640, 445, TRUE, 300, 300, 10 };
+    cannons[2][2] = tower{ 583, 398, TRUE, 300, 300, 10 };
+    cannons[2][3] = tower{ 645, 366, TRUE, 300, 300, 10 };
+    mortars[2][0] = tower{ 658, 423, TRUE, 300, 300, 10,500 };
+    mortars[2][1] = tower{ 613, 378, TRUE, 300, 300, 10,500 };
+    infernos[2][0] = InfernoTower{ 659, 378, TRUE, 300, 300, 0, 0.1f, FALSE, -1, FALSE };
+    infernos[2][1] = InfernoTower{ 610, 410, TRUE, 300, 300, 0, 0.1f, FALSE, -1, FALSE };
+    villageking = tower{ 642, 392, TRUE, 600, 600 };
 
     for (int i = 0; i < MAX_EFFECTS; i++)
     {
-        cannonShots[i] = (shot){ 0 };
+        cannonShots[i] = shot{ 0 };
     }
 
     cannonCount[0] = 4;
@@ -293,14 +294,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
         InitGame(hWnd);
         //isLoading = FALSE; // 주석처리로 로딩 끄기 가능
         //gameState = STATE_MENU;
-        shopButton = (RECT){ 50, 800, 200, 860 };  // 좌측 하단 대략 위치
+        shopButton = RECT{ 50, 800, 200, 860 };  // 좌측 하단 대략 위치
         break;
 
     case WM_LBUTTONDOWN: {
         int x = LOWORD(lParam), y = HIWORD(lParam);
 
         if (gameState == STATE_SHOP) {
-            if (PtInRect(&shopExitButton, (POINT) { x, y })) {
+            if (PtInRect(&shopExitButton, POINT { x, y })) {
                 gameState = STATE_MENU;
                 InvalidateRect(hWnd, NULL, FALSE);
                 return 0;
@@ -343,7 +344,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 
         if (gameState == STATE_MENU) {
             for (int i = 0; i < DOOR_COUNT; i++) {
-                if (PtInRect(&doorRects[i], (POINT) { x, y })) {
+                if (PtInRect(&doorRects[i], POINT { x, y })) {
                     if ((i == 1 && !archerUnlocked) || (i == 2 && !giantUnlocked)) {
                         MessageBox(hWnd, _T("해당 스테이지는 아직 해금되지 않았습니다."), _T("잠김"), MB_OK | MB_ICONWARNING);
                         return 0;
@@ -358,14 +359,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
                 }
             }
             for (int i = 0; i < 3; i++) {
-                if (PtInRect(&stageButtons[i], (POINT) { x, y })) {
-                    gameState = STATE_STAGE1 + i;
+                if (PtInRect(&stageButtons[i], POINT { x, y })) {
+                    gameState = static_cast<GameState>(STATE_STAGE1 + i);
                     barbarianCount = 0;
                     InvalidateRect(hWnd, NULL, FALSE);
                 }
             }
 
-            if (PtInRect(&shopButton, (POINT) { x, y })) {
+            if (PtInRect(&shopButton, POINT { x, y })) {
                 gameState = STATE_SHOP;
                 InvalidateRect(hWnd, NULL, FALSE);
                 return 0;
@@ -515,7 +516,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
                 {
                     // Q 키 → 바바리안
                     if (GetAsyncKeyState('Q') & 0x8000 && barbarianCount < MAX_UNITS) {
-                        barbarians[barbarianCount++] = (Unit){
+                        barbarians[barbarianCount++] = Unit{
                             x, y, 0, 7 + unitSpeed, {0, 0}, 100, 100, 10 + unitAtk, 25,
                             tx, ty, (tx != -1), targetIdx, 0,
                             0
@@ -526,7 +527,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
                     // W 키 → 아처
                     else if (GetAsyncKeyState('W') & 0x8000 && archerCount < MAX_UNITS) {
                         if (!archerUnlocked) return 0;
-                        archers[archerCount++] = (Unit){
+                        archers[archerCount++] = Unit{
                             x, y, 0, 7 + unitSpeed, {0, 0}, 80, 80, 15 + unitAtk, 75,
                             tx, ty, (tx != -1), targetIdx, 0,
                             0
@@ -537,7 +538,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 
                 if (GetAsyncKeyState('E') & 0x8000 && giantsCount < MAX_UNITS && mana - 10 >= 0) {
                     if (!giantUnlocked) return 0;
-                    giants[giantsCount++] = (Unit){
+                    giants[giantsCount++] = Unit{
                         x, y, 0, 4 + unitSpeed, {0, 0}, 500, 500, 25 + unitAtk, 25,
                         tx, ty, (tx != -1), targetIdx, 0,
                         0
