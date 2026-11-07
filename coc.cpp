@@ -6,6 +6,7 @@
 #include "BattleLogic.h"
 #include "RendererGlobals.h"
 #include "Renderer.h"
+#include "GameFramework.h"
 #include <mmsystem.h>
 
 #pragma comment(lib, "msimg32.lib")
@@ -183,12 +184,13 @@ void InitGame(HWND hWnd) {
 
     menusoundplay = FALSE;
 
-    KillTimer(hWnd, IDT_STAGE_TIMER);
-    KillTimer(hWnd, IDT_ANIM_TIMER);
-    SetTimer(hWnd, IDT_ANIM_TIMER, 200, NULL);
+    // 초기화시 타이머 설정
+    GameFramework::SetSpeed(1.0);
+    GameFramework::KillTimer(IDT_STAGE_TIMER);
+    GameFramework::StartTimer(IDT_ANIM_TIMER, 200);
 }
 
-// 게임 리셋 ? 
+// 게임 리셋
 void reset_game(HWND hWnd)
 {
     InitGame(hWnd);
@@ -249,9 +251,123 @@ void UpdateUnlockStatus() {
 }
 
 
+// 틱마다 게임 타이머에 따라 일 처리
+static void OnGameTimer(int timerId)
+{
+    if (gameState >= STATE_STAGE1 && gameState <= STATE_STAGE3)
+        if (CheckStageEnd(gameState - STATE_STAGE1)) {
+            gameState = STATE_END;
+        }
+
+    if (timerId == IDT_STAGE_TIMER && gameState >= STATE_STAGE1 && gameState <= STATE_STAGE3)
+    {
+        if (Stagetime > 0) {
+            UpdateBattleTime();
+
+            int minutes = Stagetime / 60;
+            int seconds = Stagetime % 60;
+
+            wsprintf(timeStr, TEXT("%02d:%02d"), minutes, seconds);
+        }
+        else {
+            GameFramework::KillTimer(IDT_ANIM_TIMER);
+            wsprintf(timeStr, TEXT("00:00"));
+        }
+    }
+
+    if (timerId == IDT_LOADING_TIMER && isLoading) {
+        loadingProgress += 5;
+        if (loadingProgress >= 100) {
+            isLoading = FALSE;
+            gameState = STATE_MENU;
+            GameFramework::KillTimer(IDT_LOADING_TIMER);
+        }
+    }
+
+    else if (timerId == IDT_ANIM_TIMER && gameState == STATE_MENU)
+    {
+        if (enteringIndex != -1) {
+            if (barbarianEntering[enteringIndex]) {
+                int dx = (doorRects[enteringIndex].left + 32) - (barbarianPos.x + tileWidth / 2);
+                int dy = (doorRects[enteringIndex].top + 32) - (barbarianPos.y + tileHeight / 2);
+                float dist = sqrtf(dx * dx + dy * dy);
+                if (dist > 5.0f) {
+                    barbarianPos.x += (int)(dx / dist * 10);
+                    barbarianPos.y += (int)(dy / dist * 10);
+                }
+                else {
+                    doorOpenings[enteringIndex] = TRUE;
+                }
+            }
+
+            if (doorOpenings[enteringIndex]) {
+                if (doorFrameIndices[enteringIndex] < 4) {
+                    doorFrameIndices[enteringIndex]++;
+                }
+                else {
+                    gameState = targetStages[enteringIndex];
+                    barbarianCount = archerCount = 0;
+                    currentStageIdx = targetStages[enteringIndex] - STATE_STAGE1;
+                    doorOpenings[enteringIndex] = FALSE;
+                    barbarianEntering[enteringIndex] = FALSE;
+                    doorFrameIndices[enteringIndex] = 0;
+                    enteringIndex = -1;
+                }
+            }
+
+            barbarianMenuFrame = (barbarianMenuFrame + 1) % 3;
+        }
+    }
+
+    else if (timerId == IDT_ANIM_TIMER && gameState >= STATE_STAGE1 && gameState <= STATE_STAGE3) {
+        int stageIdx = gameState - STATE_STAGE1;
+
+        UpdateTowerCooldowns(stageIdx);
+
+        RemoveDeadUnits();
+
+        // 유닛 프레임 애니메이션
+        for (int i = 0; i < barbarianCount; i++)
+            barbarians[i].frameIndex = (barbarians[i].frameIndex + 1) % 3;
+
+        for (int i = 0; i < archerCount; i++)
+            archers[i].frameIndex = (archers[i].frameIndex + 1) % 3;
+
+        giant_frame++;
+        if (giant_frame % 2 == 0)
+        {
+            for (int i = 0; i < giantsCount; i++)
+                giants[i].frameIndex = (giants[i].frameIndex + 1) % 3;
+        }
+
+        UpdateUnits(stageIdx);
+
+        UpdateArrows(stageIdx);
+
+        UpdateCannonAttacks(stageIdx);
+
+        UpdateCannonShots();
+
+        UpdateMortarAttacks(stageIdx);
+
+        UpdateMortarShots();
+
+        InfernoAttack(stageIdx);
+
+        UpdateInfernoEffects(stageIdx);
+    }
+}
+
+// 지금은 솔로 게임 전체를 하나의 모드로 감싼다. 이후 로딩/메뉴/전투 등으로 나눈다.
+class MainGameMode : public GameMode {
+public:
+    void OnTimer(int timerId) override { OnGameTimer(timerId); }
+};
+
+static MainGameMode mainMode;
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdParam, int nCmdShow) {
     HWND hWnd;
-    MSG Message;
     WNDCLASSEX WndClass = { 0 };
     g_hInst = hInstance;
 
@@ -269,14 +385,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdPa
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
 
-    SetTimer(hWnd, IDT_LOADING_TIMER, 100, NULL);
-    SetTimer(hWnd, IDT_ANIM_TIMER, 200, NULL);
+    GameFramework::StartTimer(IDT_LOADING_TIMER, 100, false);   // 로딩은 배속의 영향을 받지 않는다
+    GameFramework::StartTimer(IDT_ANIM_TIMER, 200);
 
-    while (GetMessage(&Message, 0, 0, 0)) {
-        TranslateMessage(&Message);
-        DispatchMessage(&Message);
-    }
-    return (int)Message.wParam;
+    return GameFramework::Run(hWnd, &mainMode);
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
@@ -287,7 +399,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
         if (loadingProgress >= 100) {
             isLoading = FALSE;
             gameState = STATE_MENU;
-            KillTimer(hWnd, IDT_LOADING_TIMER);
+            GameFramework::KillTimer(IDT_LOADING_TIMER);
             PlaySound(NULL, 0, 0);
         }
         Renderer_Init(g_hInst);
@@ -548,7 +660,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 
                 if (!stagestart)
                 {
-                    SetTimer(hWnd, IDT_STAGE_TIMER, 1000, NULL);
+                    GameFramework::StartTimer(IDT_STAGE_TIMER, 1000);
                     stagestart = TRUE;
                 }
 
@@ -567,24 +679,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
             break;
 
         case ID_SPEED_FAST:
-            KillTimer(hWnd, IDT_ANIM_TIMER);
-            SetTimer(hWnd, IDT_ANIM_TIMER, 100, NULL);
-            KillTimer(hWnd, IDT_STAGE_TIMER);
-            SetTimer(hWnd, IDT_STAGE_TIMER, 500, NULL);
+            GameFramework::SetSpeed(2.0);
             break;
 
         case ID_SPEED_SLOW:
-            KillTimer(hWnd, IDT_ANIM_TIMER);
-            SetTimer(hWnd, IDT_ANIM_TIMER, 400, NULL);
-            KillTimer(hWnd, IDT_STAGE_TIMER);
-            SetTimer(hWnd, IDT_STAGE_TIMER, 2000, NULL);
+            GameFramework::SetSpeed(0.5);
             break;
 
         case ID_SPEED_NORMAL:
-            KillTimer(hWnd, IDT_ANIM_TIMER);
-            SetTimer(hWnd, IDT_ANIM_TIMER, 200, NULL);
-            KillTimer(hWnd, IDT_STAGE_TIMER);
-            SetTimer(hWnd, IDT_STAGE_TIMER, 1000, NULL);
+            GameFramework::SetSpeed(1.0);
             break;
 
         }
@@ -645,114 +748,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
         break;
     }
 
-    case WM_TIMER:
-        if (gameState >= STATE_STAGE1 && gameState <= STATE_STAGE3)
-            if (CheckStageEnd(gameState - STATE_STAGE1)) {
-                gameState = STATE_END;
-            }
-
-        if (wParam == IDT_STAGE_TIMER && gameState >= STATE_STAGE1 && gameState <= STATE_STAGE3)
-        {
-            if (Stagetime > 0) {
-                UpdateBattleTime();
-
-                int minutes = Stagetime / 60;
-                int seconds = Stagetime % 60;
-
-                wsprintf(timeStr, TEXT("%02d:%02d"), minutes, seconds);
-            }
-            else {
-                KillTimer(hWnd, 1);
-                wsprintf(timeStr, TEXT("00:00"));
-            }
-            InvalidateRect(hWnd, NULL, FALSE);
-        }
-
-        if (wParam == IDT_LOADING_TIMER && isLoading) {
-            loadingProgress += 5;
-            if (loadingProgress >= 100) {
-                isLoading = FALSE;
-                gameState = STATE_MENU;
-                KillTimer(hWnd, IDT_LOADING_TIMER);
-            }
-            InvalidateRect(hWnd, NULL, FALSE);
-        }
-
-        else if (wParam == IDT_ANIM_TIMER && gameState == STATE_MENU)
-        {
-            if (enteringIndex != -1) {
-                if (barbarianEntering[enteringIndex]) {
-                    int dx = (doorRects[enteringIndex].left + 32) - (barbarianPos.x + tileWidth / 2);
-                    int dy = (doorRects[enteringIndex].top + 32) - (barbarianPos.y + tileHeight / 2);
-                    float dist = sqrtf(dx * dx + dy * dy);
-                    if (dist > 5.0f) {
-                        barbarianPos.x += (int)(dx / dist * 10);
-                        barbarianPos.y += (int)(dy / dist * 10);
-                    }
-                    else {
-                        doorOpenings[enteringIndex] = TRUE;
-                    }
-                }
-
-                if (doorOpenings[enteringIndex]) {
-                    if (doorFrameIndices[enteringIndex] < 4) {
-                        doorFrameIndices[enteringIndex]++;
-                    }
-                    else {
-                        gameState = targetStages[enteringIndex];
-                        barbarianCount = archerCount = 0;
-                        currentStageIdx = targetStages[enteringIndex] - STATE_STAGE1;
-                        doorOpenings[enteringIndex] = FALSE;
-                        barbarianEntering[enteringIndex] = FALSE;
-                        doorFrameIndices[enteringIndex] = 0;
-                        enteringIndex = -1;
-                    }
-                }
-
-                barbarianMenuFrame = (barbarianMenuFrame + 1) % 3;
-            }
-        }
-
-        else if (wParam == IDT_ANIM_TIMER && gameState >= STATE_STAGE1 && gameState <= STATE_STAGE3) {
-            int stageIdx = gameState - STATE_STAGE1;
-
-            UpdateTowerCooldowns(stageIdx);
-
-            RemoveDeadUnits();
-
-            // 유닛 프레임 애니메이션
-            for (int i = 0; i < barbarianCount; i++)
-                barbarians[i].frameIndex = (barbarians[i].frameIndex + 1) % 3;
-
-            for (int i = 0; i < archerCount; i++)
-                archers[i].frameIndex = (archers[i].frameIndex + 1) % 3;
-
-            giant_frame++;
-            if (giant_frame % 2 == 0)
-            {
-                for (int i = 0; i < giantsCount; i++)
-                    giants[i].frameIndex = (giants[i].frameIndex + 1) % 3;
-            }
-
-            UpdateUnits(stageIdx);
-
-            UpdateArrows(stageIdx);
-
-            UpdateCannonAttacks(stageIdx);
-
-            UpdateCannonShots();
-
-            UpdateMortarAttacks(stageIdx);
-
-            UpdateMortarShots();
-
-            InfernoAttack(stageIdx);
-
-            UpdateInfernoEffects(stageIdx);
-        }
-        InvalidateRect(hWnd, NULL, FALSE);
-        break;
-
     case WM_PAINT: {
         PAINTSTRUCT ps;
         HDC hDC = BeginPaint(hWnd, &ps);
@@ -765,9 +760,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
         Renderer_Shutdown();
         PlaySound(0, 0, NULL);
-        KillTimer(hWnd, IDT_ANIM_TIMER);
-        KillTimer(hWnd, IDT_LOADING_TIMER);
-        KillTimer(hWnd, IDT_STAGE_TIMER);
+        GameFramework::KillTimer(IDT_ANIM_TIMER);
+        GameFramework::KillTimer(IDT_LOADING_TIMER);
+        GameFramework::KillTimer(IDT_STAGE_TIMER);
         PostQuitMessage(0);
         break;
     }
