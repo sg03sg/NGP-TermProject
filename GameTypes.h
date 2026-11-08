@@ -15,21 +15,6 @@
 
 typedef struct {
     int x, y;
-    int frameIndex;
-    int speed;
-    POINT dir;
-    int hp, maxHp;
-    int atk;
-    int range;
-    int targetX, targetY;  // 목표 위치
-    BOOL hasTarget;
-    int targetIndex;
-    int towerindex;
-    int attackCooldown;
-} Unit;
-
-typedef struct {
-    int x, y;
     BOOL active;
     int hp, maxHp;
     int atk;
@@ -44,8 +29,7 @@ typedef struct {
 	int attackCooldown;
 	float damageRatio;  // 체력 비례 데미지
 	BOOL isAttacking;
-	int targetIndex;
-	BOOL isTargetArcher;
+	int targetId;           // 공격 중인 유닛 id
 } InfernoTower;
 
 typedef struct {
@@ -64,9 +48,7 @@ typedef struct {
     float vx, vy;             // 속도 벡터
     int life;                 // 남은 프레임
     BOOL active;
-    int targetIndex;
-    BOOL isArcher;
-    BOOL isGiant;
+    int targetId;             // 대상 유닛 id
     int sourceTowerId;
 } InfernoEffect;
 
@@ -74,8 +56,7 @@ typedef struct {
     float x, y;
     float vx, vy;
     int targetX, targetY;     // 목표 위치 (대포 중심)
-    int targetIndex;
-    int unittype;
+    int targetId;             // 대상 유닛 id
     int life;
     BOOL active;
     int totalLife;         // 포물선 시각 효과 계산용

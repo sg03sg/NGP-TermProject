@@ -58,14 +58,6 @@ ArrowEffect* arrowEffects = NULL;
 int arrowEffectCount = 0;
 int arrowEffectCapacity = 0;
 
-Unit barbarians[MAX_UNITS];
-int barbarianCount = 0;
-
-Unit archers[MAX_UNITS];
-int archerCount = 0;
-
-Unit giants[MAX_UNITS];
-int giantsCount = 0;
 int giant_frame = 0;
 
 tower cannons[3][MAX_TOWER];
@@ -132,12 +124,10 @@ void InitGame(HWND hWnd) {
     showrange = FALSE;
     showblock = FALSE;
 
-    memset(barbarians, 0, sizeof(barbarians));
-    memset(archers, 0, sizeof(archers));
-    memset(giants, 0, sizeof(giants));
+    ClearUnits();
     memset(naturaltowercount, 0, sizeof(naturaltowercount));
 
-    barbarianCount = archerCount = arrowEffectCount = cannonShotCount = giantsCount = 0;
+    arrowEffectCount = cannonShotCount = 0;
 
     InitializeBattle();
 
@@ -159,8 +149,8 @@ void InitGame(HWND hWnd) {
     cannons[2][3] = tower{ 645, 366, TRUE, 300, 300, 10 };
     mortars[2][0] = tower{ 658, 423, TRUE, 300, 300, 10,500 };
     mortars[2][1] = tower{ 613, 378, TRUE, 300, 300, 10,500 };
-    infernos[2][0] = InfernoTower{ 659, 378, TRUE, 300, 300, 0, 0.1f, FALSE, -1, FALSE };
-    infernos[2][1] = InfernoTower{ 610, 410, TRUE, 300, 300, 0, 0.1f, FALSE, -1, FALSE };
+    infernos[2][0] = InfernoTower{ 659, 378, TRUE, 300, 300, 0, 0.1f, FALSE, -1 };
+    infernos[2][1] = InfernoTower{ 610, 410, TRUE, 300, 300, 0, 0.1f, FALSE, -1 };
     villageking = tower{ 642, 392, TRUE, 600, 600 };
 
     for (int i = 0; i < MAX_EFFECTS; i++)
@@ -306,7 +296,8 @@ static void OnGameTimer(int timerId)
                 }
                 else {
                     gameState = targetStages[enteringIndex];
-                    barbarianCount = archerCount = 0;
+                    ClearUnits(UnitType::Barbarian);
+                    ClearUnits(UnitType::Archer);
                     currentStageIdx = targetStages[enteringIndex] - STATE_STAGE1;
                     doorOpenings[enteringIndex] = FALSE;
                     barbarianEntering[enteringIndex] = FALSE;
@@ -327,17 +318,18 @@ static void OnGameTimer(int timerId)
         RemoveDeadUnits();
 
         // 유닛 프레임 애니메이션
-        for (int i = 0; i < barbarianCount; i++)
-            barbarians[i].frameIndex = (barbarians[i].frameIndex + 1) % 3;
-
-        for (int i = 0; i < archerCount; i++)
-            archers[i].frameIndex = (archers[i].frameIndex + 1) % 3;
+        for (Unit& u : units) {
+            if (u.GetType() != UnitType::Giant)
+                u.AdvanceFrame();
+        }
 
         giant_frame++;
         if (giant_frame % 2 == 0)
         {
-            for (int i = 0; i < giantsCount; i++)
-                giants[i].frameIndex = (giants[i].frameIndex + 1) % 3;
+            for (Unit& u : units) {
+                if (u.GetType() == UnitType::Giant)
+                    u.AdvanceFrame();
+            }
         }
 
         UpdateUnits(stageIdx);
@@ -356,6 +348,18 @@ static void OnGameTimer(int timerId)
 
         UpdateInfernoEffects(stageIdx);
     }
+}
+
+// 상점 업그레이드를 반영해 유닛을 소환한다
+static void SpawnPlayerUnit(UnitType type, int x, int y, int targetX, int targetY, int targetIndex)
+{
+    UnitStats stats = GetUnitStats(type);
+    stats.atk += unitAtk;
+    stats.speed += unitSpeed;
+
+    Unit* unit = SpawnUnit(type, x, y, stats);
+    if (unit)
+        unit->SetTarget(targetX, targetY, targetIndex);
 }
 
 // 지금은 솔로 게임 전체를 하나의 모드로 감싼다. 이후 로딩/메뉴/전투 등으로 나눈다.
@@ -473,7 +477,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
             for (int i = 0; i < 3; i++) {
                 if (PtInRect(&stageButtons[i], POINT { x, y })) {
                     gameState = static_cast<GameState>(STATE_STAGE1 + i);
-                    barbarianCount = 0;
+                    ClearUnits(UnitType::Barbarian);
                     InvalidateRect(hWnd, NULL, FALSE);
                 }
             }
@@ -493,7 +497,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
             break;
         }
 
-        else if (gameState >= STATE_STAGE1 && gameState <= STATE_STAGE3 && (barbarianCount < MAX_UNITS || archerCount < MAX_UNITS)) {
+        else if (gameState >= STATE_STAGE1 && gameState <= STATE_STAGE3 && (CountUnits(UnitType::Barbarian) < MAX_UNITS || CountUnits(UnitType::Archer) < MAX_UNITS)) {
             int stage = 0;
             if (gameState == 2)
                 stage = 1;
@@ -627,34 +631,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
                 if (mana - 5 >= 0)
                 {
                     // Q 키 → 바바리안
-                    if (GetAsyncKeyState('Q') & 0x8000 && barbarianCount < MAX_UNITS) {
-                        barbarians[barbarianCount++] = Unit{
-                            x, y, 0, 7 + unitSpeed, {0, 0}, 100, 100, 10 + unitAtk, 25,
-                            tx, ty, (tx != -1), targetIdx, 0,
-                            0
-                        };
+                    if (GetAsyncKeyState('Q') & 0x8000 && CountUnits(UnitType::Barbarian) < MAX_UNITS) {
+                        SpawnPlayerUnit(UnitType::Barbarian, x, y, tx, ty, targetIdx);
                         mana -= 5;
                     }
 
                     // W 키 → 아처
-                    else if (GetAsyncKeyState('W') & 0x8000 && archerCount < MAX_UNITS) {
+                    else if (GetAsyncKeyState('W') & 0x8000 && CountUnits(UnitType::Archer) < MAX_UNITS) {
                         if (!archerUnlocked) return 0;
-                        archers[archerCount++] = Unit{
-                            x, y, 0, 7 + unitSpeed, {0, 0}, 80, 80, 15 + unitAtk, 75,
-                            tx, ty, (tx != -1), targetIdx, 0,
-                            0
-                        };
+                        SpawnPlayerUnit(UnitType::Archer, x, y, tx, ty, targetIdx);
                         mana -= 5;
                     }
                 }
 
-                if (GetAsyncKeyState('E') & 0x8000 && giantsCount < MAX_UNITS && mana - 10 >= 0) {
+                if (GetAsyncKeyState('E') & 0x8000 && CountUnits(UnitType::Giant) < MAX_UNITS && mana - 10 >= 0) {
                     if (!giantUnlocked) return 0;
-                    giants[giantsCount++] = Unit{
-                        x, y, 0, 4 + unitSpeed, {0, 0}, 500, 500, 25 + unitAtk, 25,
-                        tx, ty, (tx != -1), targetIdx, 0,
-                        0
-                    };
+                    SpawnPlayerUnit(UnitType::Giant, x, y, tx, ty, targetIdx);
                     mana -= 10;
                 }
 

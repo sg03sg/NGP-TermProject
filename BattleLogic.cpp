@@ -1,5 +1,6 @@
 #include "BattleLogic.h"
 #include <math.h>
+#include <algorithm>
 #include <tchar.h>
 
 // 기존 coc.c의 전역 상태를 참조한다. 실제 정의는 coc.c 한 곳에 유지
@@ -19,12 +20,6 @@ extern int tileWidth;
 extern int tileHeight;
 extern int towercount[3];
 extern int unitRate;
-extern Unit barbarians[MAX_UNITS];
-extern int barbarianCount;
-extern Unit archers[MAX_UNITS];
-extern int archerCount;
-extern Unit giants[MAX_UNITS];
-extern int giantsCount;
 extern InfernoEffect infernoEffects[50];
 extern int infernoEffectCount;
 extern InfernoTower infernos[3][MAX_TOWER];
@@ -49,7 +44,7 @@ extern int naturaltowercount[3];
 void AddArrowEffect(ArrowEffect effect);
 
 void UpdateUnit(Unit* u, tower* cannons, tower* mortars, InfernoTower* infernos, int infernoCount, int mortarCount, int cannonCount, BOOL isRanged, int stageIdx) {
-    if (u->hp <= 0) return;
+    if (u->IsDead()) return;
 
     // 타겟 필요성 검사
     BOOL needRetarget = !u->hasTarget || u->targetIndex < 0 || u->targetIndex >= cannonCount ||(u->targetIndex != -1 && (!cannons[u->targetIndex].active || !mortars[u->targetIndex].active || !infernos[u->targetIndex].active));
@@ -306,17 +301,9 @@ void InfernoAttack(int stageIdx) {
 
         // 현재 타겟 유효성 검사
         if (t->isAttacking) {
-            Unit* target = NULL;
-            int idx = t->targetIndex;
+            Unit* target = FindUnit(t->targetId);
 
-            if (t->isTargetArcher && idx < archerCount)
-                target = &archers[idx];
-            else if (!t->isTargetArcher && idx < barbarianCount)
-                target = &barbarians[idx];
-            else if (!t->isTargetArcher && idx < giantsCount)
-                target = &giants[idx];
-
-            if (target && target->hp > 0) {
+            if (target && !target->IsDead()) {
                 float dx = (target->x + tileWidth / 2) - (t->x + 32);
                 float dy = (target->y + tileHeight / 2) - (t->y + 32);
                 float dist = sqrtf(dx * dx + dy * dy);
@@ -332,25 +319,20 @@ void InfernoAttack(int stageIdx) {
         // 타겟이 무효하면 리셋
         if (!valid) {
             t->isAttacking = FALSE;
-            t->targetIndex = -1;
+            t->targetId = -1;
         }
 
         // 새 타겟 탐색
         if (!t->isAttacking) {
             float minDist = 999999.0f;
             int bestIdx = -1;
-            BOOL isArcher = FALSE, isGiant = FALSE;
 
-            for (int j = 0; j < barbarianCount + archerCount + giantsCount; j++) {
-                BOOL currIsArcher = (j >= barbarianCount && j < barbarianCount + archerCount);
-                BOOL currIsGiant = (j >= barbarianCount + archerCount);
-
+            for (int j = 0; j < (int)units.size(); j++) {
                 if (infernoTargetUsed[j]) continue; // 다른 인페르노가 이미 타겟팅한 유닛이면 건너뜀
 
-                Unit* target = currIsArcher ? &archers[j - barbarianCount] :
-                    (currIsGiant ? &giants[j - barbarianCount - archerCount] : &barbarians[j]);
+                Unit* target = &units[j];
 
-                if (target->hp <= 0) continue;
+                if (target->IsDead()) continue;
 
                 float dx = (target->x + tileWidth / 2) - (t->x + 32);
                 float dy = (target->y + tileHeight / 2) - (t->y + 32);
@@ -359,21 +341,16 @@ void InfernoAttack(int stageIdx) {
                 if (dist < 50 && dist < minDist) {
                     minDist = dist;
                     bestIdx = j;
-                    isArcher = currIsArcher;
-                    isGiant = currIsGiant;
                 }
             }
 
             if (bestIdx != -1) {
                 infernoTargetUsed[bestIdx] = TRUE;
 
-                t->isAttacking = TRUE;
-                t->isTargetArcher = isArcher;
-                t->targetIndex = isArcher ? bestIdx - barbarianCount :
-                    (isGiant ? bestIdx - barbarianCount - archerCount : bestIdx);
+                Unit* target = &units[bestIdx];
 
-                Unit* target = isArcher ? &archers[t->targetIndex] :
-                    (isGiant ? &giants[t->targetIndex] : &barbarians[t->targetIndex]);
+                t->isAttacking = TRUE;
+                t->targetId = target->GetId();
 
                 tx = target->x + tileWidth / 2;
                 ty = target->y + tileHeight / 2;
@@ -398,9 +375,7 @@ void InfernoAttack(int stageIdx) {
                     infernoEffects[infernoEffectCount++] = InfernoEffect{
                         sx, sy, dx / len, dy / len,
                         999, TRUE,
-                        t->targetIndex,
-                        isArcher,
-                        isGiant,
+                        t->targetId,
                         i
                     };
                 }
@@ -411,18 +386,12 @@ void InfernoAttack(int stageIdx) {
 
         // 데미지 처리
         if (t->isAttacking && valid) {
-            Unit* target = NULL;
-            if (t->isTargetArcher && t->targetIndex < archerCount)
-                target = &archers[t->targetIndex];
-            else if (!t->isTargetArcher && t->targetIndex < barbarianCount)
-                target = &barbarians[t->targetIndex];
-            else if (!t->isTargetArcher && t->targetIndex < giantsCount)
-                target = &giants[t->targetIndex];
+            Unit* target = FindUnit(t->targetId);
 
-            if (target && target->hp > 0) {
-                int damage = (int)(target->maxHp * t->damageRatio);
+            if (target && !target->IsDead()) {
+                int damage = (int)(target->GetMaxHp() * t->damageRatio);
                 if (damage < 1) damage = 1;
-                target->hp -= damage;
+                target->TakeDamage(damage);
                 t->attackCooldown = 1;
             }
         }
@@ -440,15 +409,7 @@ void UpdateInfernoEffects(int stageIdx) {
             continue;
         }
 
-        int tidx = infernoEffects[i].targetIndex;
-        BOOL isArcher = infernoEffects[i].isArcher;
-        BOOL isGiant = infernoEffects[i].isGiant;
-
-        BOOL targetValid =
-            (isArcher && tidx < archerCount) ||
-            (!isArcher && !isGiant && tidx < barbarianCount) ||
-            (!isArcher && isGiant && tidx < giantsCount);
-        if (!targetValid) {
+        if (!FindUnit(infernoEffects[i].targetId)) {
             infernoEffects[i].active = FALSE;
             continue;
         }
@@ -472,62 +433,16 @@ void UpdateTowerCooldowns(int stageIdx)
 // RemoveDeadEntities()에 해당 -----------------------------------------------------------------------
 void RemoveDeadUnits(void)
 {
-    // 여기서 부터 사망 처리 옮겨야함 
-            // [1] 바바리안 제거 (hp <= 0) 
-    for (int i = 0; i < barbarianCount; ) {
-        if (barbarians[i].hp <= 0) {
-            for (int j = i; j < barbarianCount - 1; j++) {
-                barbarians[j] = barbarians[j + 1];
-            }
-            barbarianCount--;
-        }
-        else {
-            i++;
-        }
-    }
-
-    // [2] 아처 제거 (hp <= 0)
-    for (int i = 0; i < archerCount; ) {
-        if (archers[i].hp <= 0) {
-            for (int j = i; j < archerCount - 1; j++) {
-                archers[j] = archers[j + 1];
-            }
-            archerCount--;
-        }
-        else {
-            i++;
-        }
-    }
-
-    //자이언트 제거 hp 0 아래일때
-    for (int i = 0; i < giantsCount; ) {
-        if (giants[i].hp <= 0) {
-            for (int j = i; j < giantsCount - 1; j++) {
-                giants[j] = giants[j + 1];
-            }
-            giantsCount--;
-        }
-        else {
-            i++;
-        }
-    }
+    units.erase(std::remove_if(units.begin(), units.end(),
+        [](const Unit& u) { return u.IsDead(); }), units.end());
 }
 
 void UpdateUnits(int stageIdx)
 {
-    // 이동 공격 처리 옮겨야함 
-           //바바 이동 공격
-    for (int i = 0; i < barbarianCount; i++)
-        UpdateUnit(&barbarians[i], cannons[stageIdx], mortars[stageIdx], infernos[stageIdx], infernoCount[stageIdx], mortarCount[stageIdx], cannonCount[stageIdx], FALSE, stageIdx);
-
-    //아처 이동 공격
-    for (int i = 0; i < archerCount; i++)
-        UpdateUnit(&archers[i], cannons[stageIdx], mortars[stageIdx], infernos[stageIdx], infernoCount[stageIdx], mortarCount[stageIdx], cannonCount[stageIdx], TRUE, stageIdx);
-
-    //자이언트 //
-    for (int i = 0; i < giantsCount; i++)
-        UpdateUnit(&giants[i], cannons[stageIdx], mortars[stageIdx], infernos[stageIdx], infernoCount[stageIdx], mortarCount[stageIdx], cannonCount[stageIdx], FALSE, stageIdx);
-    // 이동 공격 처리 끝 
+    // 이동 공격 처리 옮겨야함
+    for (Unit& u : units)
+        UpdateUnit(&u, cannons[stageIdx], mortars[stageIdx], infernos[stageIdx], infernoCount[stageIdx], mortarCount[stageIdx], cannonCount[stageIdx], u.IsRanged(), stageIdx);
+    // 이동 공격 처리 끝
 }
 
 void UpdateArrows(int stageIdx)
@@ -623,75 +538,30 @@ void UpdateCannonAttacks(int stageIdx)
 
         // 가장 가까운 유닛 탐색
         float minDist = 999999.0f;
-        int targetIndex = -1;
-        int u_type = -1;
+        Unit* best = nullptr;
 
-        // 바바리안 검사
-        for (int j = 0; j < barbarianCount; j++) {
-            float dx = (barbarians[j].x + tileWidth / 2) - (c->x + tileWidth);
-            float dy = (barbarians[j].y + tileHeight / 2) - (c->y + tileWidth);
+        for (Unit& u : units) {
+            float dx = (u.x + tileWidth / 2) - (c->x + tileWidth);
+            float dy = (u.y + tileHeight / 2) - (c->y + tileWidth);
             float dist = sqrtf(dx * dx + dy * dy);
             if (dist < 100 && dist < minDist) {
                 minDist = dist;
-                targetIndex = j;
-                u_type = 0;
-            }
-        }
-
-        // 아처 검사
-        for (int j = 0; j < archerCount; j++) {
-            float dx = (archers[j].x + tileWidth / 2) - (c->x + tileWidth);
-            float dy = (archers[j].y + tileHeight / 2) - (c->y + tileWidth);
-            float dist = sqrtf(dx * dx + dy * dy);
-            if (dist < 100 && dist < minDist) {
-                minDist = dist;
-                targetIndex = j;
-                u_type = 1;
-            }
-        }
-
-        //자이언트 검사
-        for (int j = 0; j < giantsCount; j++) {
-            float dx = (giants[j].x + tileWidth / 2) - (c->x + tileWidth);
-            float dy = (giants[j].y + tileHeight / 2) - (c->y + tileWidth);
-            float dist = sqrtf(dx * dx + dy * dy);
-            if (dist < 100 && dist < minDist) {
-                minDist = dist;
-                targetIndex = j;
-                u_type = 2;
+                best = &u;
             }
         }
 
         // 유닛 발견 시 대포알 발사
-        if (targetIndex != -1 && c->attackCooldown == 0) {
+        if (best && c->attackCooldown == 0) {
             shot shot;
             shot.x = c->x + 32;
             shot.y = c->y + 32;
-            shot.targetIndex = targetIndex;
-            shot.unittype = u_type;
+            shot.targetId = best->GetId();
             shot.active = TRUE;
             shot.life = 60;
             shot.isMortarShot = FALSE;
 
-            float tx;
-            float ty;
-            switch (shot.unittype)
-            {
-            case 0:
-                tx = barbarians[shot.targetIndex].x + tileWidth / 2;
-                ty = barbarians[shot.targetIndex].y + tileHeight / 2;
-                break;
-            case 1:
-                tx = archers[shot.targetIndex].x + tileWidth / 2;
-                ty = archers[shot.targetIndex].y + tileHeight / 2;
-
-                break;
-            case 2:
-                tx = giants[shot.targetIndex].x + tileWidth / 2;
-                ty = giants[shot.targetIndex].y + tileHeight / 2;
-
-                break;
-            }
+            float tx = best->x + tileWidth / 2;
+            float ty = best->y + tileHeight / 2;
 
             float dx = tx - shot.x;
             float dy = ty - shot.y;
@@ -724,34 +594,16 @@ void UpdateCannonShots(void)
         p->y += p->vy;
         p->life--;
 
-        // 타겟 유닛이 죽었거나 잘못된 인덱스면 탄 제거
-        if (p->unittype == 0 && (p->targetIndex >= barbarianCount || barbarians[p->targetIndex].hp <= 0)) {
-            cannonShots[i] = cannonShots[--cannonShotCount];
-            continue;
-        }
-        if (p->unittype == 1 && (p->targetIndex >= archerCount || archers[p->targetIndex].hp <= 0)) {
-            cannonShots[i] = cannonShots[--cannonShotCount];
-            continue;
-        }
-        if (p->unittype == 2 && (p->targetIndex >= giantsCount || giants[p->targetIndex].hp <= 0)) {
+        // 타겟 유닛이 죽었거나 사라졌으면 탄 제거
+        Unit* target = FindUnit(p->targetId);
+        if (!target || target->IsDead()) {
             cannonShots[i] = cannonShots[--cannonShotCount];
             continue;
         }
 
         //  현재 위치로 충돌 체크
-        float tx = 0, ty = 0;
-        if (p->unittype == 0) {
-            tx = barbarians[p->targetIndex].x + tileWidth / 2;
-            ty = barbarians[p->targetIndex].y + tileHeight / 2;
-        }
-        else if (p->unittype == 1) {
-            tx = archers[p->targetIndex].x + tileWidth / 2;
-            ty = archers[p->targetIndex].y + tileHeight / 2;
-        }
-        else if (p->unittype == 2) {
-            tx = giants[p->targetIndex].x + tileWidth / 2;
-            ty = giants[p->targetIndex].y + tileHeight / 2;
-        }
+        float tx = target->x + tileWidth / 2;
+        float ty = target->y + tileHeight / 2;
 
         float dx = p->x - tx;
         float dy = p->y - ty;
@@ -759,12 +611,7 @@ void UpdateCannonShots(void)
         int cannondamage = 50;
 
         if (dist < 10.0f || p->life <= 0) {
-            if (p->unittype == 0)
-                barbarians[p->targetIndex].hp -= cannondamage;
-            else if (p->unittype == 1)
-                archers[p->targetIndex].hp -= cannondamage;
-            else if (p->unittype == 2)
-                giants[p->targetIndex].hp -= cannondamage;
+            target->TakeDamage(cannondamage);
 
             cannonShots[i] = cannonShots[--cannonShotCount];
             continue;
@@ -787,59 +634,24 @@ void UpdateMortarAttacks(int stageIdx)
         }
 
         float maxDist = -1.0f;
-        int targetIndex = -1;
-        int u_type = -1;
+        Unit* best = nullptr;
         float tx = 0, ty = 0;
 
-        // 바바리안
-        for (int j = 0; j < barbarianCount; j++) {
-            if (barbarians[j].hp <= 0) continue;
+        for (Unit& u : units) {
+            if (u.IsDead()) continue;
 
-            float dx = (barbarians[j].x + tileWidth / 2) - (m->x + tileWidth / 2);
-            float dy = (barbarians[j].y + tileHeight / 2) - (m->y + tileHeight / 2);
+            float dx = (u.x + tileWidth / 2) - (m->x + tileWidth / 2);
+            float dy = (u.y + tileHeight / 2) - (m->y + tileHeight / 2);
             float dist = sqrtf(dx * dx + dy * dy);
             if (dist > 60 && dist > maxDist && dist <= m->range) {
                 maxDist = dist;
-                targetIndex = j;
-                u_type = 0;
-                tx = barbarians[j].x + tileWidth / 2;
-                ty = barbarians[j].y + tileHeight / 2;
+                best = &u;
+                tx = u.x + tileWidth / 2;
+                ty = u.y + tileHeight / 2;
             }
         }
 
-        // 아처
-        for (int j = 0; j < archerCount; j++) {
-            if (archers[j].hp <= 0) continue;
-
-            float dx = (archers[j].x + tileWidth / 2) - (m->x + tileWidth / 2);
-            float dy = (archers[j].y + tileHeight / 2) - (m->y + tileHeight / 2);
-            float dist = sqrtf(dx * dx + dy * dy);
-            if (dist > 60 && dist > maxDist && dist <= m->range) {
-                maxDist = dist;
-                targetIndex = j;
-                u_type = 1;
-                tx = archers[j].x + tileWidth / 2;
-                ty = archers[j].y + tileHeight / 2;
-            }
-        }
-
-        // 자이언트
-        for (int j = 0; j < giantsCount; j++) {
-            if (giants[j].hp <= 0) continue;
-
-            float dx = (giants[j].x + tileWidth / 2) - (m->x + tileWidth / 2);
-            float dy = (giants[j].y + tileHeight / 2) - (m->y + tileHeight / 2);
-            float dist = sqrtf(dx * dx + dy * dy);
-            if (dist > 60 && dist > maxDist && dist <= m->range) {
-                maxDist = dist;
-                targetIndex = j;
-                u_type = 2;
-                tx = giants[j].x + tileWidth / 2;
-                ty = giants[j].y + tileHeight / 2;
-            }
-        }
-
-        if (targetIndex != -1 && cannonShotCount < MAX_EFFECTS) {
+        if (best && cannonShotCount < MAX_EFFECTS) {
             shot s;
             s.x = m->x + tileWidth / 2;
             s.y = m->y + tileHeight / 2;
@@ -850,8 +662,7 @@ void UpdateMortarAttacks(int stageIdx)
             s.life = 30;
             s.totalLife = 30;
             s.active = TRUE;
-            s.targetIndex = targetIndex;
-            s.unittype = u_type;
+            s.targetId = best->GetId();
             s.isMortarShot = TRUE;
 
             cannonShots[cannonShotCount++] = s;
@@ -881,33 +692,13 @@ void UpdateMortarShots(void)
             float ty = p->targetY;
             int mortardamage = 80;
 
-            // 바바리안 전체 검사
-            for (int j = 0; j < barbarianCount; j++) {
-                float bx = barbarians[j].x + tileWidth / 2;
-                float by = barbarians[j].y + tileHeight / 2;
-                float d = sqrtf((bx - tx) * (bx - tx) + (by - ty) * (by - ty));
+            // 범위 안의 유닛 전체 검사
+            for (Unit& u : units) {
+                float ux = u.x + tileWidth / 2;
+                float uy = u.y + tileHeight / 2;
+                float d = sqrtf((ux - tx) * (ux - tx) + (uy - ty) * (uy - ty));
                 if (d <= 30) {
-                    barbarians[j].hp -= mortardamage;
-                }
-            }
-
-            // 아처 전체 검사
-            for (int j = 0; j < archerCount; j++) {
-                float ax = archers[j].x + tileWidth / 2;
-                float ay = archers[j].y + tileHeight / 2;
-                float d = sqrtf((ax - tx) * (ax - tx) + (ay - ty) * (ay - ty));
-                if (d <= 30) {
-                    archers[j].hp -= mortardamage;
-                }
-            }
-
-            // 자이언트 전체 검사
-            for (int j = 0; j < giantsCount; j++) {
-                float gx = giants[j].x + tileWidth / 2;
-                float gy = giants[j].y + tileHeight / 2;
-                float d = sqrtf((gx - tx) * (gx - tx) + (gy - ty) * (gy - ty));
-                if (d <= 30) {
-                    giants[j].hp -= mortardamage;
+                    u.TakeDamage(mortardamage);
                 }
             }
 

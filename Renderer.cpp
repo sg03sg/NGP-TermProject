@@ -359,12 +359,13 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
         DeleteDC(memDC);
     }
 
-    for (int i = 0; i < barbarianCount; i++) {
-        int x = barbarians[i].x, y = barbarians[i].y, frame = barbarians[i].frameIndex;
-        int tidx = barbarians[i].targetIndex;
+    for (const Unit& u : units) {
+        if (u.GetType() != UnitType::Barbarian) continue;
+        int x = u.x, y = u.y, frame = u.frameIndex;
+        int tidx = u.targetIndex;
         HBITMAP bmpToUse = hWalkBmp[frame];
         BITMAP* bmpInfo = &bmpWalk[frame];
-        if (barbarians[i].hasTarget && tidx >= 0 && tidx < cannonCount[stageIdx]) {
+        if (u.hasTarget && tidx >= 0 && tidx < cannonCount[stageIdx]) {
             int cannonX = cannons[stageIdx][tidx].x;
             if (x < cannonX) {
                 bmpToUse = hRightWalkBmp[frame];
@@ -375,16 +376,17 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
         COLORREF baba_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, x, y, tileHeight, tileHeight, paintDC, 0, 0,
             bmpInfo->bmWidth, bmpInfo->bmHeight, baba_back_color);
-        DrawHealthBar(mDC, x, y, tileHeight, 6, barbarians[i].hp, barbarians[i].maxHp);
+        DrawHealthBar(mDC, x, y, tileHeight, 6, u.GetHp(), u.GetMaxHp());
     }
 
 
-    for (int i = 0; i < archerCount; i++) {
-        int x = archers[i].x, y = archers[i].y, frame = archers[i].frameIndex;
-        int tidx = archers[i].targetIndex;
+    for (const Unit& u : units) {
+        if (u.GetType() != UnitType::Archer) continue;
+        int x = u.x, y = u.y, frame = u.frameIndex;
+        int tidx = u.targetIndex;
         HBITMAP bmpToUse = hArcherBmp[frame];
         BITMAP* bmpInfo = &aWalk[frame];
-        if (archers[i].hasTarget && tidx >= 0 && tidx < cannonCount[stageIdx]) {
+        if (u.hasTarget && tidx >= 0 && tidx < cannonCount[stageIdx]) {
             int cannonX = cannons[stageIdx][tidx].x;
             if (x < cannonX) {
                 bmpToUse = hrightarcherbmp[frame];
@@ -395,7 +397,7 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
         COLORREF archer_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, x, y, tileHeight, tileHeight, paintDC, 0, 0,
             bmpInfo->bmWidth, bmpInfo->bmHeight, archer_back_color);
-        DrawHealthBar(mDC, x, y, tileHeight, 6, archers[i].hp, archers[i].maxHp);
+        DrawHealthBar(mDC, x, y, tileHeight, 6, u.GetHp(), u.GetMaxHp());
     }
 
     for (int i = 0; i < arrowEffectCount; i++) {
@@ -407,19 +409,20 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
 
     }
 
-    for (int i = 0; i < giantsCount; i++) {
-        int x = giants[i].x, y = giants[i].y, frame = giants[i].frameIndex;
-        int tidx = giants[i].targetIndex;
+    for (const Unit& u : units) {
+        if (u.GetType() != UnitType::Giant) continue;
+        int x = u.x, y = u.y, frame = u.frameIndex;
+        int tidx = u.targetIndex;
         HBITMAP bmpToUse = hgiantsbmp[frame];
         BITMAP* bmpInfo = &bmpgiants[frame];
-        if (giants[i].hasTarget && tidx >= 0 && tidx < cannonCount[stageIdx]) {
+        if (u.hasTarget && tidx >= 0 && tidx < cannonCount[stageIdx]) {
             int cannonX = cannons[stageIdx][tidx].x;
         }
         SelectObject(paintDC, bmpToUse);
         COLORREF giant_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, x, y, tileHeight * 1.3f, tileHeight * 1.3, paintDC, 0, 0,
             bmpInfo->bmWidth, bmpInfo->bmHeight, giant_back_color);
-        DrawHealthBar(mDC, x, y, tileHeight, 6, giants[i].hp, giants[i].maxHp);
+        DrawHealthBar(mDC, x, y, tileHeight, 6, u.GetHp(), u.GetMaxHp());
     }
 
     for (int i = 0; i < cannonCount[stageIdx]; i++) {
@@ -594,25 +597,11 @@ static void DrawInfernoEffects(HDC mDC, int stageIdx) {
         float sx = infernoEffects[i].x;
         float sy = infernoEffects[i].y;
 
-        int tidx = infernoEffects[i].targetIndex;
-        BOOL isArcher = infernoEffects[i].isArcher;
+        Unit* target = FindUnit(infernoEffects[i].targetId);
+        if (!target) continue;
 
-        float tx = 0, ty = 0;
-        if (isArcher && tidx < archerCount) {
-            tx = archers[tidx].x + tileWidth / 2;
-            ty = archers[tidx].y + tileHeight / 2;
-        }
-        else if (!isArcher && !infernoEffects[i].isGiant && tidx < barbarianCount) {
-            tx = barbarians[tidx].x + tileWidth / 2;
-            ty = barbarians[tidx].y + tileHeight / 2;
-        }
-        else if (!isArcher && infernoEffects[i].isGiant && tidx < giantsCount) {
-            tx = giants[tidx].x + tileWidth / 2;
-            ty = giants[tidx].y + tileHeight / 2;
-        }
-        else {
-            continue;
-        }
+        float tx = target->x + tileWidth / 2;
+        float ty = target->y + tileHeight / 2;
 
         HPEN hPen = CreatePen(PS_SOLID, 4, RGB(255, 253, 126));
         HPEN oldPen = static_cast<HPEN>(SelectObject(mDC, hPen));

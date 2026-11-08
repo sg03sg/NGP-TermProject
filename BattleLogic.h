@@ -2,6 +2,7 @@
 #define BATTLE_LOGIC_H
 
 #include "GameTypes.h"
+#include "Unit.h"
 
 void UpdateUnit(Unit* u, tower* cannons, tower* mortars, InfernoTower* infernos,
     int infernoCount, int mortarCount, int cannonCount, BOOL isRanged, int stageIdx);

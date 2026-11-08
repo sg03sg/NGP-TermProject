@@ -136,6 +136,7 @@
     <ClCompile Include="coc.cpp" />
     <ClCompile Include="GameFramework.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="Unit.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BattleLogic.h" />
@@ -143,6 +144,7 @@
     <ClInclude Include="GameTypes.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="Unit.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
