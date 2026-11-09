@@ -140,6 +140,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BattleLogic.h" />
+    <ClInclude Include="Message.h" />
+    <ClInclude Include="Protocol.h" />
     <ClInclude Include="RendererGlobals.h" />
     <ClInclude Include="GameTypes.h" />
     <ClInclude Include="GameFramework.h" />
