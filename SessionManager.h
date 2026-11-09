@@ -23,6 +23,7 @@ public:
     void SendToSessions(const std::vector<int>& sessionIds, const char* data, int length);
     void RemoveSession(int sessionId);
 
+    void ReapClosed(); // 끊긴 세션을 맵에서 빼고 락 밖에서 Join (게임 스레드가 주기 호출)
     void Broadcast(const char* data, int length);
     void Clear();
 };

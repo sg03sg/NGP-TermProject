@@ -10,7 +10,7 @@
 
 class GameServer {
 private:
-    SOCKET listenSocket_;
+    std::atomic<SOCKET> listenSocket_;   // Stop()과 AcceptLoop의 동시 접근 방지
     std::atomic<bool> running_;
     // ThreadSafeQueue<Command> requestQueue_;
     std::thread acceptThread_;

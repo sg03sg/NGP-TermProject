@@ -5,17 +5,14 @@
 #include <atomic>
 #include <vector>
 #include "ThreadSafeQueue.h"
-// #include "PacketBuffer.h"
 
 class GameServer;
 
 class ClientSession {
 private:
     GameServer* server_;
-
     const int sessionId_;
     SOCKET socket_;
-    // PacketBuffer recvBuffer_;
     ThreadSafeQueue<std::vector<char>> sendQueue_;
     std::thread recvThread_;
     std::thread sendThread_;
@@ -24,6 +21,8 @@ private:
 
     void RecvThread();
     void SendThread();
+
+    void NotifyClosed(); // 연결 종료 이벤트를 한 번만 알림
 
 public:
     ClientSession(GameServer* server, SOCKET sock, int sessionId);
