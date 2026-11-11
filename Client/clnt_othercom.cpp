@@ -1,61 +1,43 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "common.h"
+#include "NetworkClient.h"
 
 #define SERVERIP   "127.0.0.1"
 #define SERVERPORT 9000
 
-DWORD WINAPI ClientThread(LPVOID arg)
-{
-	SOCKET sock = (SOCKET)arg;
-
-	return 0;
-}
-
 int main(int argc, char* argv[])
 {
-	int retval;
-
 	const char* serverip = SERVERIP;
 	int port = SERVERPORT;
 	if (argc >= 2) serverip = argv[1];
 	if (argc >= 3) port = atoi(argv[2]);
 
-	struct sockaddr_in serv_addr;
-	memset(&serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin_family = AF_INET;
-	if (inet_pton(AF_INET, serverip, &serv_addr.sin_addr) != 1) {
-		printf("잘못된 IP 주소: %s\n", serverip);
-		return 1;
-	}
 	if (port <= 0 || port > 65535) {
 		printf("잘못된 포트 번호: %s\n", argv[2]);
 		return 1;
 	}
-	serv_addr.sin_port = htons((u_short)port);
 
-	WSADATA wsa;
-	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) return 1;
+	if (!NetworkClient::Startup()) return 1;
 
-	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock == INVALID_SOCKET) err_quit("socket()");
-
-	retval = connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
-	if (retval == SOCKET_ERROR) err_quit("connect()");
-
+	NetworkClient client;
+	if (!client.Connect(serverip, (unsigned short)port)) {
+		WSASetLastError(client.LastError());
+		err_quit("connect()");
+	}
 	printf("[TCP 클라이언트] 서버 접속: IP=%s, 포트=%d\n", serverip, port);
+	printf("보낼 문자열을 입력하세요. q 입력 시 종료\n");
 
-	HANDLE hThread = CreateThread(NULL, 0, ClientThread, (LPVOID)sock, 0, NULL);
-	if (hThread == NULL) {
-		printf("스레드 생성 실패\n");
-		closesocket(sock);
-		WSACleanup();
-		return 1;
+	char line[256];
+	while (client.IsConnected() && fgets(line, sizeof(line), stdin) != NULL) {
+		if (line[0] == 'q' && (line[1] == '\n' || line[1] == '\0')) break;
+		if (!client.QueuePacket(line, (int)strlen(line)))
+			printf("전송 큐에 넣지 못했습니다.\n");
 	}
 
-	WaitForSingleObject(hThread, INFINITE);
-	CloseHandle(hThread);
+	if (!client.IsConnected())
+		err_display(client.LastError());
 
-	closesocket(sock);
-	WSACleanup();
+	client.Disconnect();
+	NetworkClient::Cleanup();
 	return 0;
 }
