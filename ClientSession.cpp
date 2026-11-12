@@ -1,6 +1,7 @@
 #include "ClientSession.h"
 #include "GameServer.h"
 #include <iostream>
+#include <algorithm>
 
 ClientSession::ClientSession(GameServer* server, SOCKET sock, int sessionId) : server_(server), socket_(sock), sessionId_(sessionId), closing_(false), closeNotified_(false) {
 
@@ -34,24 +35,36 @@ void ClientSession::RecvThread() {
 
 void ClientSession::SendThread() {
     std::vector<char> packetData;
-    while (!closing_) {
-        if (sendQueue_.WaitPop(packetData)) {
-            if (closing_) break;
-            size_t offset = 0;
-            while (offset < packetData.size()) {
-                int sent = send(socket_, packetData.data() + offset, static_cast<int>(packetData.size() - offset), 0);
-                if (sent == SOCKET_ERROR) {
-                    RequestClose();
-                    return;
-                }
-                offset += static_cast<size_t>(sent);
+    while (sendQueue_.WaitPop(packetData)) {          // 큐가 닫히면 false → 종료
+        size_t offset = 0;
+        while (offset < packetData.size()) {
+            if (closing_) return;
+
+            const int remain = static_cast<int>(
+                std::min<size_t>(packetData.size() - offset, 64 * 1024));
+            const int sent = send(socket_, packetData.data() + offset, remain, 0);
+
+            if (sent == SOCKET_ERROR) {
+                if (WSAGetLastError() == WSAEINTR) continue;   // 인터럽트는 재시도
+                RequestClose();
+                return;
             }
+            if (sent == 0) {                                   // 진행 없음 → 무한 루프 방지
+                RequestClose();
+                return;
+            }
+            offset += static_cast<size_t>(sent);
         }
     }
 }
 
 bool ClientSession::QueuePacket(const char* data, int length) {
-    if (closing_ || data == nullptr || length <= 0) {
+    if (closing_ || data == nullptr || length <= 0) return false;
+
+    // 수신이 느린 클라이언트가 큐를 무한정 키우지 못하게 한다.
+    if (sendQueue_.Size() >= kMaxPendingPackets) {
+        std::cout << "[ClientSession] 세션 (" << sessionId_ << ") 송신 큐 초과, 연결 종료." << std::endl;
+        RequestClose();
         return false;
     }
     return sendQueue_.Push(std::vector<char>(data, data + length));

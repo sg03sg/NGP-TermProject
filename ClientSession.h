@@ -6,6 +6,8 @@
 #include <vector>
 #include "ThreadSafeQueue.h"
 
+static constexpr size_t kMaxPendingPackets = 512;
+
 class GameServer;
 
 class ClientSession {
