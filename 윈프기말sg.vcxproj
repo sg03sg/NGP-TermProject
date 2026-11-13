@@ -22,7 +22,7 @@
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{6bafdcbf-3afb-4a16-a4a5-3fa2cbc71741}</ProjectGuid>
-    <RootNamespace>À©ÇÁ±â¸»sg</RootNamespace>
+    <RootNamespace>ï¿½ï¿½ï¿½ï¿½ï¿½â¸»sg</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -135,12 +135,14 @@
     <ClCompile Include="BattleLogic.cpp" />
     <ClCompile Include="coc.cpp" />
     <ClCompile Include="GameFramework.cpp" />
+    <ClCompile Include="PacketCodec.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Unit.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BattleLogic.h" />
     <ClInclude Include="Message.h" />
+    <ClInclude Include="PacketCodec.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="RendererGlobals.h" />
     <ClInclude Include="GameTypes.h" />
@@ -157,48 +159,48 @@
     <Image Include="BMP\shoparcher.bmp" />
     <Image Include="BMP\shopbaba.bmp" />
     <Image Include="BMP\shopgiant.bmp" />
-    <Image Include="BMP\°ÔÀÓ ½Â¸®.bmp" />
-    <Image Include="BMP\°ÔÀÓ ÆÐ¹è ÀÌ¹ÌÁö.bmp" />
-    <Image Include="BMP\´ëÆ÷.bmp" />
-    <Image Include="BMP\´ëÆ÷¾Ë 2.bmp" />
-    <Image Include="BMP\´ëÆ÷¾Ë.bmp" />
-    <Image Include="BMP\¸¶³ªÃ¢.bmp" />
-    <Image Include="BMP\¸¶À»È¸°ü.bmp" />
-    <Image Include="BMP\¸Ê bmp.bmp" />
-    <Image Include="BMP\¸Þ´º ¹è°æ.bmp" />
-    <Image Include="BMP\¹Ù¹Ù¸®¾È °È±â 0.bmp" />
-    <Image Include="BMP\¹Ù¹Ù¸®¾È °È±â 1.bmp" />
-    <Image Include="BMP\¹Ù¹Ù¸®¾È°È±â2.bmp" />
-    <Image Include="BMP\¹Ù¹Ù¿À¸¥ÂÊ1.bmp" />
-    <Image Include="BMP\¹Ù¹Ù¿À¸¥ÂÊ2.bmp" />
-    <Image Include="BMP\¹Ù¹Ù¿À¸¥ÂÊ3.bmp" />
-    <Image Include="BMP\¹Ú°ÝÆ÷.bmp" />
-    <Image Include="BMP\ºó º°.bmp" />
-    <Image Include="BMP\»óÁ¡ È­¸é.bmp" />
-    <Image Include="BMP\½ºÅ×ÀÌÁö 1-2.bmp" />
-    <Image Include="BMP\½ºÅ×ÀÌÁö 1-3.bmp" />
-    <Image Include="BMP\½ºÅ×ÀÌÁö 1-4.bmp" />
-    <Image Include="BMP\½ºÅ×ÀÌÁö 1.bmp" />
-    <Image Include="BMP\½ºÅ×ÀÌÁö1-1.bmp" />
-    <Image Include="BMP\¾ÆÃ³UI.bmp" />
-    <Image Include="BMP\¾ÆÃ³_1-removebg-preview.bmp" />
-    <Image Include="BMP\¾ÆÃ³_1-¹ÝÀü.bmp" />
-    <Image Include="BMP\¾ÆÃ³_2-removebg-preview.bmp" />
-    <Image Include="BMP\¾ÆÃ³_2-¹ÝÀü.bmp" />
-    <Image Include="BMP\¾ÆÃ³_3-removebg-preview.bmp" />
-    <Image Include="BMP\¾ÆÃ³_3-¹ÝÀü.bmp" />
-    <Image Include="BMP\À¯´Ö Ã¢.bmp" />
-    <Image Include="BMP\ÀÎÆä¸£³ë Å¸¿ö.bmp" />
-    <Image Include="BMP\ÀÚÀÌ¾ðÆ® °È±â 3.bmp" />
-    <Image Include="BMP\ÀÚÀÌ¾ðÆ® °È±â1.bmp" />
-    <Image Include="BMP\ÀÚÀÌ¾ðÆ® °È±â2.bmp" />
-    <Image Include="BMP\Ã¤¿öÁø º°.bmp" />
-    <Image Include="BMP\Å¬¿ÀÅ¬ ½ÃÀÛÀÌ¹ÌÁö2.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½ ï¿½Â¸ï¿½.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½ ï¿½Ð¹ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 2.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½Ã¢.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½È¸ï¿½ï¿½.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ bmp.bmp" />
+    <Image Include="BMP\ï¿½Þ´ï¿½ ï¿½ï¿½ï¿½.bmp" />
+    <Image Include="BMP\ï¿½Ù¹Ù¸ï¿½ï¿½ï¿½ ï¿½È±ï¿½ 0.bmp" />
+    <Image Include="BMP\ï¿½Ù¹Ù¸ï¿½ï¿½ï¿½ ï¿½È±ï¿½ 1.bmp" />
+    <Image Include="BMP\ï¿½Ù¹Ù¸ï¿½ï¿½È°È±ï¿½2.bmp" />
+    <Image Include="BMP\ï¿½Ù¹Ù¿ï¿½ï¿½ï¿½ï¿½ï¿½1.bmp" />
+    <Image Include="BMP\ï¿½Ù¹Ù¿ï¿½ï¿½ï¿½ï¿½ï¿½2.bmp" />
+    <Image Include="BMP\ï¿½Ù¹Ù¿ï¿½ï¿½ï¿½ï¿½ï¿½3.bmp" />
+    <Image Include="BMP\ï¿½Ú°ï¿½ï¿½ï¿½.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ ï¿½ï¿½.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½ È­ï¿½ï¿½.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 1-2.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 1-3.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 1-4.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 1.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½1-1.bmp" />
+    <Image Include="BMP\ï¿½ï¿½Ã³UI.bmp" />
+    <Image Include="BMP\ï¿½ï¿½Ã³_1-removebg-preview.bmp" />
+    <Image Include="BMP\ï¿½ï¿½Ã³_1-ï¿½ï¿½ï¿½ï¿½.bmp" />
+    <Image Include="BMP\ï¿½ï¿½Ã³_2-removebg-preview.bmp" />
+    <Image Include="BMP\ï¿½ï¿½Ã³_2-ï¿½ï¿½ï¿½ï¿½.bmp" />
+    <Image Include="BMP\ï¿½ï¿½Ã³_3-removebg-preview.bmp" />
+    <Image Include="BMP\ï¿½ï¿½Ã³_3-ï¿½ï¿½ï¿½ï¿½.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ï¿½ Ã¢.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½ä¸£ï¿½ï¿½ Å¸ï¿½ï¿½.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½Ì¾ï¿½Æ® ï¿½È±ï¿½ 3.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½Ì¾ï¿½Æ® ï¿½È±ï¿½1.bmp" />
+    <Image Include="BMP\ï¿½ï¿½ï¿½Ì¾ï¿½Æ® ï¿½È±ï¿½2.bmp" />
+    <Image Include="BMP\Ã¤ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½.bmp" />
+    <Image Include="BMP\Å¬ï¿½ï¿½Å¬ ï¿½ï¿½ï¿½ï¿½ï¿½Ì¹ï¿½ï¿½ï¿½2.bmp" />
   </ItemGroup>
   <ItemGroup>
-    <Media Include="WAV\Villager Talk Å¬·¡½Ã ¿Àºê Å¬·£ ¸Þ´ººê±Ý.wav" />
-    <Media Include="WAV\Å¬¿ÀÅ¬ ·Îµù¼Ò¸®.wav" />
-    <Media Include="WAV\Å¬¿ÀÅ¬ ÀüÅõ ºê±Ý.wav" />
+    <Media Include="WAV\Villager Talk Å¬ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½ ï¿½Þ´ï¿½ï¿½ï¿½ï¿½.wav" />
+    <Media Include="WAV\Å¬ï¿½ï¿½Å¬ ï¿½Îµï¿½ï¿½Ò¸ï¿½.wav" />
+    <Media Include="WAV\Å¬ï¿½ï¿½Å¬ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½.wav" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
