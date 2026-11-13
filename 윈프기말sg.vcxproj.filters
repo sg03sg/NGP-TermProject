@@ -30,6 +30,9 @@
     <ClCompile Include="GameFramework.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="PacketCodec.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -59,6 +62,9 @@
     <ClInclude Include="Protocol.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="PacketCodec.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">
@@ -66,94 +72,7 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="BMP\맵 bmp.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\바바리안 걷기 0.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\바바리안 걷기 1.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\바바리안걷기2.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\대포.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\대포알.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
     <Image Include="BMP\arrow.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\대포알 2.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\바바오른쪽1.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\바바오른쪽2.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\바바오른쪽3.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\마을회관.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\유닛 창.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\자이언트 걷기1.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\자이언트 걷기2.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\자이언트 걷기 3.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\마나창.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\빈 별.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\채워진 별.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\게임 패배 이미지.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\게임 승리.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\박격포.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\메뉴 배경.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\스테이지 1.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\상점 화면.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\스테이지 1-2.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\스테이지 1-3.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\스테이지 1-4.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\스테이지1-1.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BMP\인페르노 타워.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
     <Image Include="BMP\shoparcher.bmp">
@@ -165,39 +84,126 @@
     <Image Include="BMP\shopgiant.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="BMP\아처_1-removebg-preview.bmp">
+    <Image Include="BMP\���� �¸�.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="BMP\아처_2-removebg-preview.bmp">
+    <Image Include="BMP\���� �й� �̹���.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="BMP\아처_3-removebg-preview.bmp">
+    <Image Include="BMP\����.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="BMP\아처_1-반전.bmp">
+    <Image Include="BMP\������ 2.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="BMP\아처_2-반전.bmp">
+    <Image Include="BMP\������.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="BMP\아처_3-반전.bmp">
+    <Image Include="BMP\����â.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="BMP\아처UI.bmp">
+    <Image Include="BMP\����ȸ��.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="BMP\클오클 시작이미지2.bmp">
+    <Image Include="BMP\�� bmp.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\�޴� ���.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\�ٹٸ��� �ȱ� 0.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\�ٹٸ��� �ȱ� 1.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\�ٹٸ��Ȱȱ�2.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\�ٹٿ�����1.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\�ٹٿ�����2.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\�ٹٿ�����3.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\�ڰ���.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\�� ��.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\���� ȭ��.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\�������� 1-2.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\�������� 1-3.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\�������� 1-4.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\�������� 1.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\��������1-1.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\��óUI.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\��ó_1-removebg-preview.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\��ó_1-����.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\��ó_2-removebg-preview.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\��ó_2-����.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\��ó_3-removebg-preview.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\��ó_3-����.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\���� â.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\���丣�� Ÿ��.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\���̾�Ʈ �ȱ� 3.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\���̾�Ʈ �ȱ�1.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\���̾�Ʈ �ȱ�2.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\ä���� ��.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="BMP\Ŭ��Ŭ �����̹���2.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <Media Include="WAV\클오클 로딩소리.wav">
+    <Media Include="WAV\Villager Talk Ŭ���� ���� Ŭ�� �޴����.wav">
       <Filter>리소스 파일</Filter>
     </Media>
-    <Media Include="WAV\Villager Talk 클래시 오브 클랜 메뉴브금.wav">
+    <Media Include="WAV\Ŭ��Ŭ �ε��Ҹ�.wav">
       <Filter>리소스 파일</Filter>
     </Media>
-    <Media Include="WAV\클오클 전투 브금.wav">
+    <Media Include="WAV\Ŭ��Ŭ ���� ���.wav">
       <Filter>리소스 파일</Filter>
     </Media>
   </ItemGroup>
