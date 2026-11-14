@@ -1,6 +1,8 @@
-#define _CRT_SECURE_NO_WARNINGS
+ï»¿#define _CRT_SECURE_NO_WARNINGS
 #include "common.h"
 #include "NetworkClient.h"
+
+#include <conio.h>
 
 #define SERVERIP   "127.0.0.1"
 #define SERVERPORT 9000
@@ -13,7 +15,7 @@ int main(int argc, char* argv[])
 	if (argc >= 3) port = atoi(argv[2]);
 
 	if (port <= 0 || port > 65535) {
-		printf("Àß¸øµÈ Æ÷Æ® ¹øÈ£: %s\n", argv[2]);
+		printf("ì˜ëª»ëœ í¬íŠ¸ ë²ˆí˜¸: %s\n", argv[2]);
 		return 1;
 	}
 
@@ -24,18 +26,61 @@ int main(int argc, char* argv[])
 		WSASetLastError(client.LastError());
 		err_quit("connect()");
 	}
-	printf("[TCP Å¬¶óÀÌ¾ğÆ®] ¼­¹ö Á¢¼Ó: IP=%s, Æ÷Æ®=%d\n", serverip, port);
-	printf("º¸³¾ ¹®ÀÚ¿­À» ÀÔ·ÂÇÏ¼¼¿ä. q ÀÔ·Â ½Ã Á¾·á\n");
+	printf("[TCP í´ë¼ì´ì–¸íŠ¸] ì„œë²„ ì ‘ì†: IP=%s, í¬íŠ¸=%d\n", serverip, port);
+	printf("ë¬¸ìì—´ì„ ì…ë ¥í•˜ê³  Enterë¥¼ ëˆ„ë¥´ë©´ ì „ì†¡í•©ë‹ˆë‹¤. q ì…ë ¥ ì‹œ ì¢…ë£Œ\n");
 
 	char line[256];
-	while (client.IsConnected() && fgets(line, sizeof(line), stdin) != NULL) {
-		if (line[0] == 'q' && (line[1] == '\n' || line[1] == '\0')) break;
-		if (!client.QueuePacket(line, (int)strlen(line)))
-			printf("Àü¼Û Å¥¿¡ ³ÖÁö ¸øÇß½À´Ï´Ù.\n");
+	int lineLen = 0;
+	bool running = true;
+
+	while (running) {
+		std::vector<char> data;
+		while (client.PollReceived(data)) {
+			printf("\n[ìˆ˜ì‹ ] %dë°”ì´íŠ¸: ", (int)data.size());
+			fwrite(data.data(), 1, data.size(), stdout);
+			printf("\n");
+		}
+
+		if (!client.IsConnected()) break;
+
+		while (_kbhit()) {
+			int c = _getch();
+			if (c == 0 || c == 0xE0) {
+				_getch();
+				continue;
+			}
+			if (c == '\r') {
+				printf("\n");
+				line[lineLen] = '\0';
+				if (strcmp(line, "q") == 0) {
+					running = false;
+					break;
+				}
+				if (lineLen > 0 && !client.QueuePacket(line, lineLen))
+					printf("ì „ì†¡ íì— ë„£ì§€ ëª»í–ˆìŠµë‹ˆë‹¤.\n");
+				lineLen = 0;
+			}
+			else if (c == '\b') {
+				if (lineLen > 0) {
+					lineLen--;
+					printf("\b \b");
+				}
+			}
+			else if (lineLen < (int)sizeof(line) - 1) {
+				line[lineLen++] = (char)c;
+				putchar(c);
+			}
+		}
+
+		Sleep(16);
 	}
 
-	if (!client.IsConnected())
-		err_display(client.LastError());
+	if (!client.IsConnected()) {
+		if (client.LastError() == 0)
+			printf("ì„œë²„ê°€ ì—°ê²°ì„ ì¢…ë£Œí–ˆìŠµë‹ˆë‹¤.\n");
+		else
+			err_display(client.LastError());
+	}
 
 	client.Disconnect();
 	NetworkClient::Cleanup();
