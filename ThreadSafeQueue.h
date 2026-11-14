@@ -1,4 +1,6 @@
 #pragma once
+#include <cstddef>
+#include <utility>
 #include <deque>
 #include <mutex>
 #include <condition_variable>
@@ -15,20 +17,23 @@ public:
     ThreadSafeQueue() = default;
     ~ThreadSafeQueue() { Close(); }
 
-    // 비동기 큐에 아이템 푸시
+    ThreadSafeQueue(const ThreadSafeQueue&) = delete;
+    ThreadSafeQueue& operator=(const ThreadSafeQueue&) = delete;
+
+    // 비동기 큐에 아이템 푸시. 이미 Close된 큐면 false.
     bool Push(T item) {
         std::lock_guard<std::mutex> lock(mutex_);
         if (closed_) return false;
-        items_.push_back(std::forward<T>(item));
+        items_.push_back(std::move(item));
         cond_.notify_one();
         return true;
     }
 
-    // 아이템 대기 및 팝 (블로킹)
+    // 아이템 대기 및 팝 (블로킹). Close되고 비어 있으면 false.
     bool WaitPop(T& item) {
         std::unique_lock<std::mutex> lock(mutex_);
         cond_.wait(lock, [this]() { return !items_.empty() || closed_; });
-        if (items_.empty() && closed_) return false;
+        if (items_.empty()) return false;   // closed_ 이고 빈 경우
         item = std::move(items_.front());
         items_.pop_front();
         return true;

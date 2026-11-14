@@ -30,10 +30,11 @@ public:
     ClientSession(GameServer* server, SOCKET sock, int sessionId);
     ~ClientSession();
 
-    void StartReceive();
+    // 수신·송신 스레드 기동. 스레드 생성에 실패하면 정리 후 false.
+    bool StartReceive();
     bool QueuePacket(const char* data, int length);
     void RequestClose();
-    void Join();
+    void Join();   // 자기 자신의 RecvThread/SendThread 안에서 호출 금지
 
     bool IsConnected() const { return !closing_; }
     int GetSessionId() const { return sessionId_; }

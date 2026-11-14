@@ -2,8 +2,12 @@
 #include "GameServer.h"
 #include <iostream>
 #include <algorithm>
+#include <exception>
+#include <string>   // std::to_string
+#include <new>      // std::bad_alloc
 
-ClientSession::ClientSession(GameServer* server, SOCKET sock, int sessionId) : server_(server), socket_(sock), sessionId_(sessionId), closing_(false), closeNotified_(false) {
+// 초기화 리스트 순서를 선언 순서(server_, sessionId_, socket_)에 맞춤
+ClientSession::ClientSession(GameServer* server, SOCKET sock, int sessionId) : server_(server), sessionId_(sessionId), socket_(sock), closing_(false), closeNotified_(false) {
 
 }
 
@@ -12,17 +16,40 @@ ClientSession::~ClientSession() {
     Join();
 }
 
-void ClientSession::StartReceive() {
-    recvThread_ = std::thread(&ClientSession::RecvThread, this);
-    sendThread_ = std::thread(&ClientSession::SendThread, this);
+bool ClientSession::StartReceive() {
+    // 소켓 옵션은 실패해도 치명적이지 않으므로 결과를 무시한다.
+    BOOL nodelay = TRUE;   // 작은 패킷을 지연 없이 전송
+    setsockopt(socket_, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&nodelay), sizeof(nodelay));
+    BOOL keepAlive = TRUE; // 비정상 단절(전원/랜선) 감지에 도움
+    setsockopt(socket_, SOL_SOCKET, SO_KEEPALIVE, reinterpret_cast<const char*>(&keepAlive), sizeof(keepAlive));
+
+    try {
+        recvThread_ = std::thread(&ClientSession::RecvThread, this);
+        sendThread_ = std::thread(&ClientSession::SendThread, this);
+    }
+    catch (const std::exception& e) {
+        // 스레드가 하나만 만들어진 채로 소멸하면 std::terminate가 호출되므로 반드시 정리한다.
+        std::cout << "[ClientSession] 세션 (" << sessionId_ << ") 스레드 생성 실패: " << e.what() << std::endl;
+        RequestClose();
+        Join();
+        return false;
+    }
+    return true;
 }
 
 void ClientSession::RecvThread() {
     char buffer[512];
     while (!closing_) {
         int recvBytes = recv(socket_, buffer, sizeof(buffer), 0);
+
+        if (recvBytes == SOCKET_ERROR && WSAGetLastError() == WSAEINTR) {
+            continue;   // 인터럽트는 재시도
+        }
         if (recvBytes <= 0) {
-            std::cout << "[ClientSession] 세션 (" << sessionId_ << ") 연결 종료 감지." << std::endl;
+            // 서버가 먼저 끊은 경우(closing_)에는 로그를 남기지 않는다.
+            if (!closing_) {
+                std::cout << "[ClientSession] 세션 (" << sessionId_ << ") 연결 종료 감지." << (recvBytes == SOCKET_ERROR ? " (오류 코드: " + std::to_string(WSAGetLastError()) + ")" : "") << std::endl;
+            }
             break;
         }
 
@@ -40,8 +67,7 @@ void ClientSession::SendThread() {
         while (offset < packetData.size()) {
             if (closing_) return;
 
-            const int remain = static_cast<int>(
-                std::min<size_t>(packetData.size() - offset, 64 * 1024));
+            const int remain = static_cast<int>(std::min<size_t>(packetData.size() - offset, 64 * 1024));
             const int sent = send(socket_, packetData.data() + offset, remain, 0);
 
             if (sent == SOCKET_ERROR) {
@@ -67,7 +93,15 @@ bool ClientSession::QueuePacket(const char* data, int length) {
         RequestClose();
         return false;
     }
-    return sendQueue_.Push(std::vector<char>(data, data + length));
+
+    try {
+        return sendQueue_.Push(std::vector<char>(data, data + length));
+    }
+    catch (const std::bad_alloc&) {
+        // 메모리 부족이 게임 스레드로 번지지 않게 이 세션만 끊는다.
+        RequestClose();
+        return false;
+    }
 }
 
 void ClientSession::RequestClose() {
