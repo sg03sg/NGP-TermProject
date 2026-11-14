@@ -1,11 +1,11 @@
-#ifndef GAME_FRAMEWORK_H
+ï»¿#ifndef GAME_FRAMEWORK_H
 #define GAME_FRAMEWORK_H
 
 #include <windows.h>
 
-// À©µµ¿ì Å¸ÀÌ¸Ó ´ë½Å ÇÁ·¹ÀÓ¿öÅ©°¡ Á÷Á¢ ½Ã°£À» Àç¼­ Æ½À» ¹ß»ı
+// ìœˆë„ìš° íƒ€ì´ë¨¸ ëŒ€ì‹  í”„ë ˆì„ì›Œí¬ê°€ ì§ì ‘ ì‹œê°„ì„ ì¬ì„œ í‹±ì„ ë°œìƒ
 
-// °ÔÀÓ ¸ğµå
+// ê²Œì„ ëª¨ë“œ
 class GameMode {
 public:
     virtual ~GameMode() {}
@@ -15,32 +15,32 @@ public:
     virtual void Pause() {}
     virtual void Resume() {}
 
-    // °ÔÀÓ Å¸ÀÌ¸Ó°¡ ¸¸·áµÉ ¶§¸¶´Ù È£ÃâµÈ´Ù.
+    // ê²Œì„ íƒ€ì´ë¨¸ê°€ ë§Œë£Œë  ë•Œë§ˆë‹¤ í˜¸ì¶œëœë‹¤.
     virtual void OnTimer(int timerId) {}
 
     virtual void Update(double frameTime) {}
 };
 
 namespace GameFramework {
-    // ¸ğµå ÀüÈ¯
+    // ëª¨ë“œ ì „í™˜
     void ChangeMode(GameMode* mode);
     void PushMode(GameMode* mode);
     void PopMode();
     void Quit();
 
-    // ¸ŞÀÎ ·çÇÁ
+    // ë©”ì¸ ë£¨í”„
     int Run(HWND hWnd, GameMode* startMode);
 
-    // °ÔÀÓ Å¸ÀÌ¸Ó.
+    // ê²Œì„ íƒ€ì´ë¨¸.
     void StartTimer(int timerId, int intervalMs, bool scaledBySpeed = true);
     void KillTimer(int timerId);
 
-    // ¹è¼Ó
+    // ë°°ì†
     void SetSpeed(double speed);
     double GetSpeed();
 
-    double GameTime();      // ½ÃÀÛ ÈÄ °ÔÀÓ ³» °æ°ú ½Ã°£
-    double FrameTime();     // ÀÌÀü ÇÁ·¹ÀÓ¿¡¼­ Èå¸¥ ½Ã°£
+    double GameTime();      // ì‹œì‘ í›„ ê²Œì„ ë‚´ ê²½ê³¼ ì‹œê°„
+    double FrameTime();     // ì´ì „ í”„ë ˆì„ì—ì„œ íë¥¸ ì‹œê°„
 }
 
 #endif

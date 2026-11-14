@@ -1,0 +1,13 @@
+root = true
+
+# 모든 소스와 프로젝트 파일은 UTF-8(BOM)로 저장한다.
+# BOM이 있어야 MSVC가 /utf-8 옵션 없이도 UTF-8로 읽는다.
+# /utf-8 옵션은 쓰지 않는다. 쓰면 실행 파일 안의 한글 문자열이 UTF-8이 되어 콘솔에서 깨진다.
+[*.{cpp,h,c,hpp,vcxproj,filters,sln}]
+charset = utf-8-bom
+end_of_line = crlf
+
+# Visual Studio 리소스 편집기가 직접 쓰는 파일이라 건드리지 않는다.
+[{resource.h,Resource.rc}]
+charset = unset
+end_of_line = unset

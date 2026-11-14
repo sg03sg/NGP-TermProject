@@ -1,17 +1,17 @@
-#ifndef RENDERER_H
+ï»¿#ifndef RENDERER_H
 #define RENDERER_H
 
 #include <windows.h>
 
-// Å¬¶óÀÌ¾ðÆ® Àü¿ë µå·ÎÀ× ¸ðµâ. °ÔÀÓ »óÅÂ´Â ÀÐ±â¸¸ ÇÑ´Ù.
+// í´ë¼ì´ì–¸íŠ¸ ì „ìš© ë“œë¡œìž‰ ëª¨ë“ˆ. ê²Œìž„ ìƒíƒœëŠ” ì½ê¸°ë§Œ í•œë‹¤.
 
-// ºñÆ®¸Ê ¸®¼Ò½º¸¦ ÇÑ ¹ø¸¸ ·ÎµåÇÑ´Ù. WM_CREATE ¿¡¼­ È£ÃâÇÑ´Ù.
+// ë¹„íŠ¸ë§µ ë¦¬ì†ŒìŠ¤ë¥¼ í•œ ë²ˆë§Œ ë¡œë“œí•œë‹¤. WM_CREATE ì—ì„œ í˜¸ì¶œí•œë‹¤.
 BOOL Renderer_Init(HINSTANCE hInst);
 
-// ·ÎµåÇÑ ¸®¼Ò½º¸¦ ÇØÁ¦ÇÑ´Ù. WM_DESTROY ¿¡¼­ È£ÃâÇÑ´Ù.
+// ë¡œë“œí•œ ë¦¬ì†ŒìŠ¤ë¥¼ í•´ì œí•œë‹¤. WM_DESTROY ì—ì„œ í˜¸ì¶œí•œë‹¤.
 void Renderer_Shutdown(void);
 
-// ÇöÀç °ÔÀÓ »óÅÂ¿¡ ¸Â´Â È­¸éÀ» ±×¸°´Ù. WM_PAINT ¿¡¼­ BeginPaint ·Î ¾òÀº hDC ¸¦ ³Ñ±ä´Ù.
+// í˜„ìž¬ ê²Œìž„ ìƒíƒœì— ë§žëŠ” í™”ë©´ì„ ê·¸ë¦°ë‹¤. WM_PAINT ì—ì„œ BeginPaint ë¡œ ì–»ì€ hDC ë¥¼ ë„˜ê¸´ë‹¤.
 void Renderer_Paint(HWND hWnd, HDC hDC);
 
 #endif

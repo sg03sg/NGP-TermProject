@@ -1,4 +1,4 @@
-#include "Unit.h"
+ï»¿#include "Unit.h"
 #include <algorithm>
 
 std::vector<Unit> units;
@@ -6,7 +6,7 @@ std::vector<Unit> units;
 namespace {
     int nextUnitId = 1;
 
-    // ¹Ù¹Ù¸®¾È, ¾ÆÃ³, ÀÚÀÌ¾ğÆ® ¼ø¼­
+    // ë°”ë°”ë¦¬ì•ˆ, ì•„ì²˜, ìì´ì–¸íŠ¸ ìˆœì„œ
     const UnitStats STATS[] = {
         { 100, 10, 25, 7, false },
         { 80, 15, 75, 7, true },
@@ -39,7 +39,7 @@ void Unit::SetTarget(int tx, int ty, int towerIndex) {
 Unit* SpawnUnit(UnitType type, int x, int y, const UnitStats& stats) {
     if (CountUnits(type) >= MAX_UNITS) return nullptr;
 
-    // °°Àº À¯´ÖÀÇ ¸Ç µÚ¿¡ ³Ö¾î À¯´Ö ¼ø¼­¸¦ À¯ÁöÇÑ´Ù
+    // ê°™ì€ ìœ ë‹›ì˜ ë§¨ ë’¤ì— ë„£ì–´ ìœ ë‹› ìˆœì„œë¥¼ ìœ ì§€í•œë‹¤
     std::vector<Unit>::iterator pos = units.begin();
     while (pos != units.end() && pos->GetType() <= type)
         ++pos;

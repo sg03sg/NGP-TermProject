@@ -1,17 +1,17 @@
-#ifndef UNIT_H
+ï»¿#ifndef UNIT_H
 #define UNIT_H
 
 #include <vector>
 #include "GameTypes.h"
 
-// À¯´Ö. ÄÁÅ×ÀÌ³Ê ¾È¿¡¼­ ÀÌ ¼ø¼­´ë·Î ¹­¿© ÀúÀåµÈ´Ù
+// ìœ ë‹›. ì»¨í…Œì´ë„ˆ ì•ˆì—ì„œ ì´ ìˆœì„œëŒ€ë¡œ ë¬¶ì—¬ ì €ì¥ëœë‹¤
 enum class UnitType {
     Barbarian,
     Archer,
     Giant
 };
 
-// À¯´Öº° ±âº» ¼öÄ¡
+// ìœ ë‹›ë³„ ê¸°ë³¸ ìˆ˜ì¹˜
 struct UnitStats {
     int maxHp;
     int atk;
@@ -42,9 +42,9 @@ public:
     int speed;
     int atk;
     int range;
-    int targetX, targetY;   // ¸ñÇ¥ À§Ä¡
+    int targetX, targetY;   // ëª©í‘œ ìœ„ì¹˜
     BOOL hasTarget;
-    int targetIndex;        // ¸ñÇ¥ Å¸¿ö ¹øÈ£
+    int targetIndex;        // ëª©í‘œ íƒ€ì›Œ ë²ˆí˜¸
     int towerindex;
     int attackCooldown;
 
@@ -56,10 +56,10 @@ private:
     bool isRanged_;
 };
 
-// ÀüÃ¼ À¯´Ö. À¯´Ö ¼ø¼­(¹Ù¹Ù¸®¾È, ¾ÆÃ³, ÀÚÀÌ¾ğÆ®)·Î ¹­ÀÌ°í À¯´Ö ¾È¿¡¼­´Â ¼ÒÈ¯ ¼ø¼­¸¦ À¯ÁöÇÑ´Ù
+// ì „ì²´ ìœ ë‹›. ìœ ë‹› ìˆœì„œ(ë°”ë°”ë¦¬ì•ˆ, ì•„ì²˜, ìì´ì–¸íŠ¸)ë¡œ ë¬¶ì´ê³  ìœ ë‹› ì•ˆì—ì„œëŠ” ì†Œí™˜ ìˆœì„œë¥¼ ìœ ì§€í•œë‹¤
 extern std::vector<Unit> units;
 
-// À¯´Ö´ç MAX_UNITS ¸¦ ³ÑÀ¸¸é nullptr. id ´Â ¼ÒÈ¯ÇÒ ¶§ ÇÑ ¹ø ºÎ¿©ÇÏ°í ´Ù½Ã ¾²Áö ¾Ê´Â´Ù
+// ìœ ë‹›ë‹¹ MAX_UNITS ë¥¼ ë„˜ìœ¼ë©´ nullptr. id ëŠ” ì†Œí™˜í•  ë•Œ í•œ ë²ˆ ë¶€ì—¬í•˜ê³  ë‹¤ì‹œ ì“°ì§€ ì•ŠëŠ”ë‹¤
 Unit* SpawnUnit(UnitType type, int x, int y, const UnitStats& stats);
 Unit* FindUnit(int id);
 int CountUnits(UnitType type);

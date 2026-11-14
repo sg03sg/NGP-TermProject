@@ -1,4 +1,4 @@
-#include "PacketCodec.h"
+ï»¿#include "PacketCodec.h"
 
 #include <string>
 
@@ -8,7 +8,7 @@ namespace {
 
 using Packet = PacketCodec::Packet;
 
-// ±âº» ÀÚ·áÇü ±â·Ï ========================================================
+// ê¸°ë³¸ ìë£Œí˜• ê¸°ë¡ ========================================================
 
 void Write(Packet& out, uint8_t value)
 {
@@ -29,15 +29,15 @@ void Write(Packet& out, uint32_t value)
     out.push_back(static_cast<uint8_t>(value));
 }
 
-// ¿©·¯ Á¤¼ö ÇÊµå¸¦ ÀûÈù ¼ø¼­´ë·Î ±â·ÏÇÑ´Ù.
+// ì—¬ëŸ¬ ì •ìˆ˜ í•„ë“œë¥¼ ì íŒ ìˆœì„œëŒ€ë¡œ ê¸°ë¡í•œë‹¤.
 template <typename... Fields>
 void WriteFields(Packet& out, const Fields&... fields)
 {
     (Write(out, fields), ...);
 }
 
-// [¹®ÀÚ¿­ ±æÀÌ 2¹ÙÀÌÆ®][¹®ÀÚ¿­ ¹ÙÀÌÆ®]
-// ±æÀÌ°¡ 2¹ÙÀÌÆ®¿¡ µé¾î°¡Áö ¾ÊÀ¸¸é false¸¦ ¹İÈ¯ÇÑ´Ù.
+// [ë¬¸ìì—´ ê¸¸ì´ 2ë°”ì´íŠ¸][ë¬¸ìì—´ ë°”ì´íŠ¸]
+// ê¸¸ì´ê°€ 2ë°”ì´íŠ¸ì— ë“¤ì–´ê°€ì§€ ì•Šìœ¼ë©´ falseë¥¼ ë°˜í™˜í•œë‹¤.
 bool WriteString(Packet& out, const string& text)
 {
     if (text.size() > UINT16_MAX) {
@@ -49,7 +49,7 @@ bool WriteString(Packet& out, const string& text)
     return true;
 }
 
-// ¸ğµç ¸Ş½ÃÁö°¡ °øÅëÀ¸·Î »ç¿ëÇÏ´Â ÆĞÅ¶ Á¶¸³ =====================================================
+// ëª¨ë“  ë©”ì‹œì§€ê°€ ê³µí†µìœ¼ë¡œ ì‚¬ìš©í•˜ëŠ” íŒ¨í‚· ì¡°ë¦½ =====================================================
 
 Packet BuildPacket(MessageType type, uint32_t requestId, const Packet& payload)
 {
@@ -63,17 +63,17 @@ Packet BuildPacket(MessageType type, uint32_t requestId, const Packet& payload)
     Packet packet;
     packet.reserve(totalLength);
 
-    Write(packet, totalLength);                   // 4¹ÙÀÌÆ®
-    Write(packet, static_cast<uint16_t>(type));   // 2¹ÙÀÌÆ®
-    Write(packet, requestId);                     // 4¹ÙÀÌÆ®
+    Write(packet, totalLength);                   // 4ë°”ì´íŠ¸
+    Write(packet, static_cast<uint16_t>(type));   // 2ë°”ì´íŠ¸
+    Write(packet, requestId);                     // 4ë°”ì´íŠ¸
 
     packet.insert(packet.end(), payload.begin(), payload.end());
     return packet;
 }
 
-} // namespace ³¡
+} // namespace ë
 
-// Á¢¼Ó ¹× ¸Ê Âü°¡ ========================================================
+// ì ‘ì† ë° ë§µ ì°¸ê°€ ========================================================
 
 Packet PacketCodec::Encode(const Hello& message, uint32_t requestId)
 {
@@ -102,7 +102,7 @@ Packet PacketCodec::Encode(const JoinMap& message, uint32_t requestId)
     return BuildPacket(MessageType::JOIN_MAP, requestId, payload);
 }
 
-// ÆÄÆ¼ =======================================================================
+// íŒŒí‹° =======================================================================
 
 Packet PacketCodec::Encode(const PartyState& message, uint32_t requestId)
 {
@@ -149,7 +149,7 @@ Packet PacketCodec::Encode(const LeaveApproved& message, uint32_t requestId)
     return BuildPacket(MessageType::LEAVE_APPROVED, requestId, payload);
 }
 
-// Ã¤ÆÃ =======================================================================
+// ì±„íŒ… =======================================================================
 
 Packet PacketCodec::Encode(const ChatSend& message, uint32_t requestId)
 {
@@ -174,7 +174,7 @@ Packet PacketCodec::Encode(const ChatMessage& message, uint32_t requestId)
     return BuildPacket(MessageType::CHAT_MESSAGE, requestId, payload);
 }
 
-// ÀüÅõ ÃÊ±âÈ­ ¹× ¼ÒÈ¯ =======================================================================
+// ì „íˆ¬ ì´ˆê¸°í™” ë° ì†Œí™˜ =======================================================================
 
 Packet PacketCodec::Encode(const BattleInit& message, uint32_t requestId)
 {
@@ -233,7 +233,7 @@ Packet PacketCodec::Encode(const RequestRejected& message, uint32_t requestId)
     return BuildPacket(MessageType::REQUEST_REJECT, requestId, payload);
 }
 
-// ÀüÅõ ÁøÇà ¹× °á°ú =======================================================================
+// ì „íˆ¬ ì§„í–‰ ë° ê²°ê³¼ =======================================================================
 
 Packet PacketCodec::Encode(const BattleState& message, uint32_t requestId)
 {
@@ -286,7 +286,7 @@ Packet PacketCodec::Encode(const ReturnLobby& message, uint32_t requestId)
     return BuildPacket(MessageType::RETURN_LOBBY, requestId, payload);
 }
 
-// Áß´Ü ÅõÇ¥ =======================================================================
+// ì¤‘ë‹¨ íˆ¬í‘œ =======================================================================
 
 Packet PacketCodec::Encode(const AbortVoteStart& message, uint32_t requestId)
 {
@@ -312,7 +312,7 @@ Packet PacketCodec::Encode(const AbortVoteResult& message, uint32_t requestId)
     return BuildPacket(MessageType::ABORT_VOTE_RESULT, requestId, payload);
 }
 
-// ÁÂÇ¥ Å×½ºÆ® =======================================================================
+// ì¢Œí‘œ í…ŒìŠ¤íŠ¸ =======================================================================
 
 Packet PacketCodec::Encode(const MarkerRequest& message, uint32_t requestId)
 {
@@ -330,7 +330,7 @@ Packet PacketCodec::Encode(const MarkerPlaced& message, uint32_t requestId)
     return BuildPacket(MessageType::MARKER_PLACED, requestId, payload);
 }
 
-// DECODE ºÎºĞ 
+// DECODE ë¶€ë¶„ 
 
 namespace {
 
@@ -338,13 +338,13 @@ namespace {
     public:
         explicit PacketReader(const PacketCodec::Packet& packet) : packet_(packet) {}
 
-        // ¾ÆÁ÷ ÀĞÁö ¾ÊÀº ¹ÙÀÌÆ® ¼ö
+        // ì•„ì§ ì½ì§€ ì•Šì€ ë°”ì´íŠ¸ ìˆ˜
         size_t Remaining() const
         {
             return packet_.size() - position_;
         }
 
-        // uint8_t, uint16_t, uint32_t¸¦ ÀĞ´Â´Ù.
+        // uint8_t, uint16_t, uint32_të¥¼ ì½ëŠ”ë‹¤.
         template <typename UInt>
         bool Read(UInt& out)
         {
@@ -360,14 +360,14 @@ namespace {
             return true;
         }
 
-        // ¿©·¯ Á¤¼ö ÇÊµå¸¦ ³ª¿­ÇÑ ¼ø¼­´ë·Î ÀĞ´Â´Ù.
+        // ì—¬ëŸ¬ ì •ìˆ˜ í•„ë“œë¥¼ ë‚˜ì—´í•œ ìˆœì„œëŒ€ë¡œ ì½ëŠ”ë‹¤.
         template <typename... Fields>
         bool ReadFields(Fields&... fields)
         {
             return (Read(fields) && ...);
         }
 
-        // [¹®ÀÚ¿­ ±æÀÌ 2¹ÙÀÌÆ®][¹®ÀÚ¿­ ¹ÙÀÌÆ®]
+        // [ë¬¸ìì—´ ê¸¸ì´ 2ë°”ì´íŠ¸][ë¬¸ìì—´ ë°”ì´íŠ¸]
         bool ReadString(uint16_t& length, string& text)
         {
             if (!Read(length)) {
@@ -393,7 +393,7 @@ namespace {
         size_t position_ = 0;
     };
 
-    // °øÅë ±¸Á¶Ã¼
+    // ê³µí†µ êµ¬ì¡°ì²´
 
     bool ReadRecord(PacketReader& reader, PartyMemberInfo& member)
     {
@@ -420,7 +420,7 @@ namespace {
         return reader.ReadFields(structure.structureId, structure.hp, structure.maxHp);
     }
 
-    // [¿ä¼Ò °³¼ö][°¢ ¿ä¼ÒÀÇ µ¥ÀÌÅÍ]
+    // [ìš”ì†Œ ê°œìˆ˜][ê° ìš”ì†Œì˜ ë°ì´í„°]
     template <typename Count, typename Item>
     bool ReadList(PacketReader& reader, Count& count, vector<Item>& items)
     {
@@ -443,9 +443,9 @@ namespace {
         return true;
     }
 
-    // ¿ªÁ÷·ÄÈ­
+    // ì—­ì§ë ¬í™”
 
-    // Á¢¼Ó ¹× ¸Ê Âü°¡ =============================================================
+    // ì ‘ì† ë° ë§µ ì°¸ê°€ =============================================================
 
     bool Deserialize(PacketReader& reader, Hello& message)
     {
@@ -462,7 +462,7 @@ namespace {
         return reader.Read(message.mapId);
     }
 
-    // ÆÄÆ¼ =======================================================================
+    // íŒŒí‹° =======================================================================
 
     bool Deserialize(PacketReader& reader, PartyState& message)
     {
@@ -484,7 +484,7 @@ namespace {
         return reader.Read(message.partyId);
     }
 
-    // Ã¤ÆÃ =======================================================================
+    // ì±„íŒ… =======================================================================
 
     bool Deserialize(PacketReader& reader, ChatSend& message)
     {
@@ -497,7 +497,7 @@ namespace {
             && reader.ReadString(message.textLength, message.text);
     }
 
-    // ÀüÅõ ÃÊ±âÈ­ ¹× ¼ÒÈ¯ =======================================================================
+    // ì „íˆ¬ ì´ˆê¸°í™” ë° ì†Œí™˜ =======================================================================
 
     bool Deserialize(PacketReader& reader, BattleInit& message)
     {
@@ -526,7 +526,7 @@ namespace {
         return reader.ReadFields(message.rejectedType, message.errorCode);
     }
 
-    // ÀüÅõ ÁøÇà ¹× °á°ú =======================================================================
+    // ì „íˆ¬ ì§„í–‰ ë° ê²°ê³¼ =======================================================================
 
     bool Deserialize(PacketReader& reader, BattleState& message)
     {
@@ -550,7 +550,7 @@ namespace {
         return reader.Read(message.partyId);
     }
 
-    // Áß´Ü ÅõÇ¥ =======================================================================
+    // ì¤‘ë‹¨ íˆ¬í‘œ =======================================================================
 
     bool Deserialize(PacketReader& reader, AbortVoteStart& message)
     {
@@ -567,7 +567,7 @@ namespace {
         return reader.ReadFields(message.partyId, message.aborted, message.stopVotes, message.totalVoters);
     }
 
-    // ÁÂÇ¥ Å×½ºÆ® =======================================================================
+    // ì¢Œí‘œ í…ŒìŠ¤íŠ¸ =======================================================================
 
     bool Deserialize(PacketReader& reader, MarkerRequest& message)
     {
@@ -579,7 +579,7 @@ namespace {
         return reader.ReadFields(message.senderId, message.x, message.y);
     }
 
-    // ¸ğµç Decode°¡ °øÀ¯ÇÏ´Â Çì´õ °Ë»ç¿Í º»¹® º¹¿ø
+    // ëª¨ë“  Decodeê°€ ê³µìœ í•˜ëŠ” í—¤ë” ê²€ì‚¬ì™€ ë³¸ë¬¸ ë³µì›
 
     template <typename Body>
     bool DecodePacket(const Packet& packet, MessageType expectedType, Body& out, PacketHeader* header)
@@ -587,7 +587,7 @@ namespace {
         PacketReader reader(packet);
         PacketHeader receivedHeader{};
 
-        // Çì´õ 10¹ÙÀÌÆ® ÀĞ±â
+        // í—¤ë” 10ë°”ì´íŠ¸ ì½ê¸°
         if (!reader.ReadFields(
             receivedHeader.totalLength,
             receivedHeader.messageType,
@@ -595,29 +595,29 @@ namespace {
             return false;
         }
 
-        // Çì´õ¿¡ ÀûÈù ±æÀÌ¿Í ½ÇÁ¦ ÆĞÅ¶ ±æÀÌ ºñ±³
+        // í—¤ë”ì— ì íŒ ê¸¸ì´ì™€ ì‹¤ì œ íŒ¨í‚· ê¸¸ì´ ë¹„êµ
         if (receivedHeader.totalLength != packet.size()) {
             return false;
         }
 
-        // º¹¿øÇÏ·Á´Â ±¸Á¶Ã¼¿Í ¸Ş½ÃÁö ¹øÈ£°¡ ¸Â´ÂÁö È®ÀÎ
+        // ë³µì›í•˜ë ¤ëŠ” êµ¬ì¡°ì²´ì™€ ë©”ì‹œì§€ ë²ˆí˜¸ê°€ ë§ëŠ”ì§€ í™•ì¸
         if (receivedHeader.messageType != static_cast<uint16_t>(expectedType)) {
             return false;
         }
 
-        // ÀÓ½Ã ±¸Á¶Ã¼¿¡ ¸ÕÀú º¹¿øÇÑ´Ù.
+        // ì„ì‹œ êµ¬ì¡°ì²´ì— ë¨¼ì € ë³µì›í•œë‹¤.
         Body decoded{};
 
         if (!Deserialize(reader, decoded)) {
             return false;
         }
 
-        // Á¤ÀÇµÈ º»¹®À» ´Ù ÀĞÀº ÈÄ ³²´Â ¹ÙÀÌÆ®°¡ ÀÖÀ¸¸é ¿À·ù
+        // ì •ì˜ëœ ë³¸ë¬¸ì„ ë‹¤ ì½ì€ í›„ ë‚¨ëŠ” ë°”ì´íŠ¸ê°€ ìˆìœ¼ë©´ ì˜¤ë¥˜
         if (reader.Remaining() != 0) {
             return false;
         }
 
-        // ¸ğµç °Ë»ç°¡ ¼º°øÇÑ °æ¿ì¿¡¸¸ È£ÃâÀÚ¿¡°Ô °á°ú Àü´Ş
+        // ëª¨ë“  ê²€ì‚¬ê°€ ì„±ê³µí•œ ê²½ìš°ì—ë§Œ í˜¸ì¶œìì—ê²Œ ê²°ê³¼ ì „ë‹¬
         out = move(decoded);
 
         if (header != nullptr) {
@@ -630,7 +630,7 @@ namespace {
 } // namespace
 
 
-// Á¢¼Ó ¹× ¸Ê Âü°¡ =======================================================================
+// ì ‘ì† ë° ë§µ ì°¸ê°€ =======================================================================
 
 bool PacketCodec::Decode(const Packet& packet, Hello& out, PacketHeader* header)
 {
@@ -647,7 +647,7 @@ bool PacketCodec::Decode(const Packet& packet, JoinMap& out, PacketHeader* heade
     return DecodePacket(packet, MessageType::JOIN_MAP, out, header);
 }
 
-// ÆÄÆ¼ =======================================================================
+// íŒŒí‹° =======================================================================
 
 bool PacketCodec::Decode(const Packet& packet, PartyState& out, PacketHeader* header)
 {
@@ -669,7 +669,7 @@ bool PacketCodec::Decode(const Packet& packet, LeaveApproved& out, PacketHeader*
     return DecodePacket(packet, MessageType::LEAVE_APPROVED, out, header);
 }
 
-// Ã¤ÆÃ =======================================================================
+// ì±„íŒ… =======================================================================
 
 bool PacketCodec::Decode(const Packet& packet, ChatSend& out, PacketHeader* header)
 {
@@ -681,7 +681,7 @@ bool PacketCodec::Decode(const Packet& packet, ChatMessage& out, PacketHeader* h
     return DecodePacket(packet, MessageType::CHAT_MESSAGE, out, header);
 }
 
-// ÀüÅõ ÃÊ±âÈ­ ¹× ¼ÒÈ¯ =======================================================================
+// ì „íˆ¬ ì´ˆê¸°í™” ë° ì†Œí™˜ =======================================================================
 
 bool PacketCodec::Decode(const Packet& packet, BattleInit& out, PacketHeader* header)
 {
@@ -708,7 +708,7 @@ bool PacketCodec::Decode(const Packet& packet, RequestRejected& out, PacketHeade
     return DecodePacket(packet, MessageType::REQUEST_REJECT, out, header);
 }
 
-// ÀüÅõ ÁøÇà ¹× °á°ú =======================================================================
+// ì „íˆ¬ ì§„í–‰ ë° ê²°ê³¼ =======================================================================
 
 bool PacketCodec::Decode(const Packet& packet, BattleState& out, PacketHeader* header)
 {
@@ -730,7 +730,7 @@ bool PacketCodec::Decode(const Packet& packet, ReturnLobby& out, PacketHeader* h
     return DecodePacket(packet, MessageType::RETURN_LOBBY, out, header);
 }
 
-// Áß´Ü ÅõÇ¥ =======================================================================
+// ì¤‘ë‹¨ íˆ¬í‘œ =======================================================================
 
 bool PacketCodec::Decode(const Packet& packet, AbortVoteStart& out, PacketHeader* header)
 {
@@ -747,7 +747,7 @@ bool PacketCodec::Decode(const Packet& packet, AbortVoteResult& out, PacketHeade
     return DecodePacket(packet, MessageType::ABORT_VOTE_RESULT, out, header);
 }
 
-// ÁÂÇ¥ Å×½ºÆ® =======================================================================
+// ì¢Œí‘œ í…ŒìŠ¤íŠ¸ =======================================================================
 
 bool PacketCodec::Decode(const Packet& packet, MarkerRequest& out, PacketHeader* header)
 {

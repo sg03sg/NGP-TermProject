@@ -1,8 +1,8 @@
-#ifndef GAME_TYPES_H
+ï»¿#ifndef GAME_TYPES_H
 #define GAME_TYPES_H
 
 #include <windows.h>
-// ¿©·¯ ¸ğµâ¿¡¼­ °øÅëÀ¸·Î »ç¿ëÇÏ´Â °ÔÀÓ ÀÚ·áÇü°ú »ó¼ö¸¦ Á¤ÀÇÇÑ´Ù
+// ì—¬ëŸ¬ ëª¨ë“ˆì—ì„œ ê³µí†µìœ¼ë¡œ ì‚¬ìš©í•˜ëŠ” ê²Œì„ ìë£Œí˜•ê³¼ ìƒìˆ˜ë¥¼ ì •ì˜í•œë‹¤
 #define MAX_UNITS 100
 #define MAX_TOWER 10
 #define MAX_INFERNOS 10
@@ -27,16 +27,16 @@ typedef struct {
 	BOOL active;
 	int hp, maxHp;
 	int attackCooldown;
-	float damageRatio;  // Ã¼·Â ºñ·Ê µ¥¹ÌÁö
+	float damageRatio;  // ì²´ë ¥ ë¹„ë¡€ ë°ë¯¸ì§€
 	BOOL isAttacking;
-	int targetId;           // °ø°İ ÁßÀÎ À¯´Ö id
+	int targetId;           // ê³µê²© ì¤‘ì¸ ìœ ë‹› id
 } InfernoTower;
 
 typedef struct {
-    float x, y;               // ÇöÀç À§Ä¡
-    float vx, vy;             // ¼Óµµ º¤ÅÍ
-    int targetX, targetY;     // ¸ñÇ¥ À§Ä¡ (´ëÆ÷ Áß½É)
-    int life;                 // ³²Àº ÇÁ·¹ÀÓ
+    float x, y;               // í˜„ì¬ ìœ„ì¹˜
+    float vx, vy;             // ì†ë„ ë²¡í„°
+    int targetX, targetY;     // ëª©í‘œ ìœ„ì¹˜ (ëŒ€í¬ ì¤‘ì‹¬)
+    int life;                 // ë‚¨ì€ í”„ë ˆì„
     BOOL active;
     int damage;
     int targetIndex;
@@ -44,23 +44,23 @@ typedef struct {
 } ArrowEffect;
 
 typedef struct {
-    float x, y;               // ÇöÀç À§Ä¡
-    float vx, vy;             // ¼Óµµ º¤ÅÍ
-    int life;                 // ³²Àº ÇÁ·¹ÀÓ
+    float x, y;               // í˜„ì¬ ìœ„ì¹˜
+    float vx, vy;             // ì†ë„ ë²¡í„°
+    int life;                 // ë‚¨ì€ í”„ë ˆì„
     BOOL active;
-    int targetId;             // ´ë»ó À¯´Ö id
+    int targetId;             // ëŒ€ìƒ ìœ ë‹› id
     int sourceTowerId;
 } InfernoEffect;
 
 typedef struct {
     float x, y;
     float vx, vy;
-    int targetX, targetY;     // ¸ñÇ¥ À§Ä¡ (´ëÆ÷ Áß½É)
-    int targetId;             // ´ë»ó À¯´Ö id
+    int targetX, targetY;     // ëª©í‘œ ìœ„ì¹˜ (ëŒ€í¬ ì¤‘ì‹¬)
+    int targetId;             // ëŒ€ìƒ ìœ ë‹› id
     int life;
     BOOL active;
-    int totalLife;         // Æ÷¹°¼± ½Ã°¢ È¿°ú °è»ê¿ë
-    BOOL isMortarShot;     // ´ëÆ÷ÀÎÁö ¹Ú°İÆ÷ÀÎÁö ±¸ºĞ (°£´ÜÇÑ BOOL·Î Ã³¸®) 
+    int totalLife;         // í¬ë¬¼ì„  ì‹œê° íš¨ê³¼ ê³„ì‚°ìš©
+    BOOL isMortarShot;     // ëŒ€í¬ì¸ì§€ ë°•ê²©í¬ì¸ì§€ êµ¬ë¶„ (ê°„ë‹¨í•œ BOOLë¡œ ì²˜ë¦¬) 
 } shot;
 
 #endif

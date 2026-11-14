@@ -1,11 +1,11 @@
-#ifndef CLIENT_GLOBALS_H
+ï»¿#ifndef CLIENT_GLOBALS_H
 #define CLIENT_GLOBALS_H
 
 #include "GameTypes.h"
 #include "Unit.h"
 
-// coc.c °¡ ¼ÒÀ¯ÇÑ Àü¿ª »óÅÂ¸¦ Å¬¶óÀÌ¾ğÆ® ¸ğµâµé(Renderer µî)ÀÌ ÂüÁ¶ÇÏ±â À§ÇÑ ¼±¾ğÀÌ´Ù.
-// Á¤ÀÇ´Â coc.c ¿¡ ÀÖÀ¸¸ç, coc.c µµ ÀÌ Çì´õ¸¦ Æ÷ÇÔÇØ "¼±¾ğ°ú Á¤ÀÇÀÇ Å¸ÀÔ ºÒÀÏÄ¡¸¦ ÄÄÆÄÀÏ·¯°¡ Àâ°Ô ÇÏ±â À§ÇÔ".
+// coc.c ê°€ ì†Œìœ í•œ ì „ì—­ ìƒíƒœë¥¼ í´ë¼ì´ì–¸íŠ¸ ëª¨ë“ˆë“¤(Renderer ë“±)ì´ ì°¸ì¡°í•˜ê¸° ìœ„í•œ ì„ ì–¸ì´ë‹¤.
+// ì •ì˜ëŠ” coc.c ì— ìˆìœ¼ë©°, coc.c ë„ ì´ í—¤ë”ë¥¼ í¬í•¨í•´ "ì„ ì–¸ê³¼ ì •ì˜ì˜ íƒ€ì… ë¶ˆì¼ì¹˜ë¥¼ ì»´íŒŒì¼ëŸ¬ê°€ ì¡ê²Œ í•˜ê¸° ìœ„í•¨".
 
 typedef enum {
     STATE_LOADING,
@@ -58,7 +58,7 @@ extern int earn_star[3];
 extern int starCount;
 extern TCHAR timeStr[16];
 
-// ¸Ş´º / »óÁ¡ È­¸é
+// ë©”ë‰´ / ìƒì  í™”ë©´
 extern int doorFrameIndices[DOOR_COUNT];
 extern BOOL barbarianEntering[DOOR_COUNT];
 extern RECT doorRects[3];

@@ -1,4 +1,4 @@
-#include "GameFramework.h"
+ï»¿#include "GameFramework.h"
 #include <chrono>
 #include <vector>
 #include <algorithm>
@@ -8,16 +8,16 @@
 namespace {
     using Clock = std::chrono::steady_clock;
 
-    // Ã¢À» ²ø°í ÀÖ´Â µ¿¾ÈÃ³·³ ·çÇÁ°¡ ¿À·¡ ¸ØÃè´Ù µ¹¾Æ¿ÔÀ» ¶§ Æ½ÀÌ ÇÑ²¨¹ø¿¡ ¸ô¸®´Â °ÍÀ» ¸·´Â´Ù.
+    // ì°½ì„ ëŒê³  ìˆëŠ” ë™ì•ˆì²˜ëŸ¼ ë£¨í”„ê°€ ì˜¤ë˜ ë©ˆì·„ë‹¤ ëŒì•„ì™”ì„ ë•Œ í‹±ì´ í•œêº¼ë²ˆì— ëª°ë¦¬ëŠ” ê²ƒì„ ë§‰ëŠ”ë‹¤.
     const double MAX_FRAME_TIME = 0.25;
     const int MAX_TICKS_PER_FRAME = 5;
 
     struct Timer {
         int id;
-        double interval;    // ÃÊ
-        double elapsed;     // ¾ÆÁ÷ Æ½À¸·Î ¹Ù²îÁö ¾ÊÀº °æ°ú ½Ã°£(ÃÊ)
+        double interval;    // ì´ˆ
+        double elapsed;     // ì•„ì§ í‹±ìœ¼ë¡œ ë°”ë€Œì§€ ì•Šì€ ê²½ê³¼ ì‹œê°„(ì´ˆ)
         bool scaled;
-        unsigned int serial;    // Àç½ÃÀÛ ¿©ºÎ¸¦ °¨ÁöÇÏ±â À§ÇÑ ¹øÈ£
+        unsigned int serial;    // ì¬ì‹œì‘ ì—¬ë¶€ë¥¼ ê°ì§€í•˜ê¸° ìœ„í•œ ë²ˆí˜¸
     };
 
     std::vector<GameMode*> modeStack;
@@ -119,7 +119,7 @@ namespace GameFramework {
         Clock::time_point current = Clock::now();
 
         while (running) {
-            // ÀÌº¥Æ® Ã³¸®
+            // ì´ë²¤íŠ¸ ì²˜ë¦¬
             MSG msg;
             while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
                 if (msg.message == WM_QUIT) {
@@ -132,27 +132,27 @@ namespace GameFramework {
             }
             if (!running) break;
 
-            // ½Ã°£ °è»ê
+            // ì‹œê°„ ê³„ì‚°
             Clock::time_point now = Clock::now();
             frameTime = std::chrono::duration<double>(now - current).count();
             current = now;
             if (frameTime > MAX_FRAME_TIME) frameTime = MAX_FRAME_TIME;
             gameTime += frameTime * speed;
 
-            // °ÔÀÓ Å¸ÀÌ¸Ó Æ½°ú ÇÁ·¹ÀÓ °»½Å
+            // ê²Œì„ íƒ€ì´ë¨¸ í‹±ê³¼ í”„ë ˆì„ ê°±ì‹ 
             bool ticked = RunTimers(frameTime);
             if (!modeStack.empty())
                 modeStack.back()->Update(frameTime);
 
-            // È­¸é °»½Å ¿äÃ»
+            // í™”ë©´ ê°±ì‹  ìš”ì²­
             if (ticked)
                 InvalidateRect(hWnd, NULL, FALSE);
 
-            // °úÀ× È®ÀÎ ¹æÁö ¼ö¸é -> ¸Ş½ÃÁö°¡ ¿À¸é ¹Ù·Î ±ú¾î³²
+            // ê³¼ì‰ í™•ì¸ ë°©ì§€ ìˆ˜ë©´ -> ë©”ì‹œì§€ê°€ ì˜¤ë©´ ë°”ë¡œ ê¹¨ì–´ë‚¨
             MsgWaitForMultipleObjects(0, NULL, FALSE, 1, QS_ALLINPUT);
         }
 
-        // ½ºÅÃ¿¡ ³²Àº ¸ğµå¸¦ À§¿¡¼­ºÎÅÍ Á¤¸®ÇÑ´Ù
+        // ìŠ¤íƒì— ë‚¨ì€ ëª¨ë“œë¥¼ ìœ„ì—ì„œë¶€í„° ì •ë¦¬í•œë‹¤
         while (!modeStack.empty()) {
             modeStack.back()->Finish();
             modeStack.pop_back();

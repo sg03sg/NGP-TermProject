@@ -1,10 +1,10 @@
-#include "BattleLogic.h"
+ï»¿#include "BattleLogic.h"
 #include <math.h>
 #include <algorithm>
 #include <tchar.h>
 
-// ±âÁ¸ coc.cÀÇ Àü¿ª »óÅÂ¸¦ ÂüÁ¶ÇÑ´Ù. ½ÇÁ¦ Á¤ÀÇ´Â coc.c ÇÑ °÷¿¡ À¯Áö
-// ÀÌÈÄ ÀüÅõ »óÅÂ¸¦ °´Ã¼·Î ¹­À» ¶§ ÀÌ ÀÇÁ¸¼ºÀ» ÇÔ²² ¿Å±ä´Ù.
+// ê¸°ì¡´ coc.cì˜ ì „ì—­ ìƒíƒœë¥¼ ì°¸ì¡°í•œë‹¤. ì‹¤ì œ ì •ì˜ëŠ” coc.c í•œ ê³³ì— ìœ ì§€
+// ì´í›„ ì „íˆ¬ ìƒíƒœë¥¼ ê°ì²´ë¡œ ë¬¶ì„ ë•Œ ì´ ì˜ì¡´ì„±ì„ í•¨ê»˜ ì˜®ê¸´ë‹¤.
 extern BOOL archerUnlocked;
 extern BOOL giantUnlocked;
 
@@ -39,17 +39,17 @@ extern int earn_star[3];
 extern int naturaltowercount[3];
 
 
-// ÀüÅõ Á¶°Ç(Update¿¡ ÇØ´ç) --------------------------------------------------------------------------------------------------------------------------------------
-// ±âÁ¸ È­»ì »ı¼º ÇÔ¼ö¸¦ »ç¿ëÇÑ´Ù. Åõ»çÃ¼ °»½ÅÀº ¾ÆÁ÷ coc.c¿¡ ³²¾Æ ÀÖ´Ù.
+// ì „íˆ¬ ì¡°ê±´(Updateì— í•´ë‹¹) --------------------------------------------------------------------------------------------------------------------------------------
+// ê¸°ì¡´ í™”ì‚´ ìƒì„± í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•œë‹¤. íˆ¬ì‚¬ì²´ ê°±ì‹ ì€ ì•„ì§ coc.cì— ë‚¨ì•„ ìˆë‹¤.
 void AddArrowEffect(ArrowEffect effect);
 
 void UpdateUnit(Unit* u, tower* cannons, tower* mortars, InfernoTower* infernos, int infernoCount, int mortarCount, int cannonCount, BOOL isRanged, int stageIdx) {
     if (u->IsDead()) return;
 
-    // Å¸°Ù ÇÊ¿ä¼º °Ë»ç
+    // íƒ€ê²Ÿ í•„ìš”ì„± ê²€ì‚¬
     BOOL needRetarget = !u->hasTarget || u->targetIndex < 0 || u->targetIndex >= cannonCount ||(u->targetIndex != -1 && (!cannons[u->targetIndex].active || !mortars[u->targetIndex].active || !infernos[u->targetIndex].active));
 
-    // Å¸°Ù Àç¼³Á¤
+    // íƒ€ê²Ÿ ì¬ì„¤ì •
     if (needRetarget) {
         int minDist = 999999;
         BOOL foundTarget = FALSE;
@@ -118,25 +118,25 @@ void UpdateUnit(Unit* u, tower* cannons, tower* mortars, InfernoTower* infernos,
         u->hasTarget = TRUE;
     }
 
-    // ÀÌµ¿
+    // ì´ë™
     int dx = (u->targetX + 32) - (u->x + tileWidth / 2);
     int dy = (u->targetY + 32) - (u->y + tileHeight / 2);
     float dist = sqrtf(dx * dx + dy * dy);
     if (dist > u->range) {
         u->x += (int)(dx / dist * u->speed);
         u->y += (int)(dy / dist * u->speed);
-        return; // ¾ÆÁ÷ µµ´ŞÇÏÁö ¾Ê¾ÒÀ¸¸é ÀÌµ¿¸¸ ÇÏ°í ³¡
+        return; // ì•„ì§ ë„ë‹¬í•˜ì§€ ì•Šì•˜ìœ¼ë©´ ì´ë™ë§Œ í•˜ê³  ë
     }
 
-    // °ø°İ ÄğÅ¸ÀÓ Ã¼Å©
+    // ê³µê²© ì¿¨íƒ€ì„ ì²´í¬
     if (u->attackCooldown > 0) {
         u->attackCooldown--;
         return;
     }
 
-    // °ø°İ ½ÇÇà
+    // ê³µê²© ì‹¤í–‰
     if (u->towerindex == -1) {
-        // ¸¶À»È¸°ü °ø°İ
+        // ë§ˆì„íšŒê´€ ê³µê²©
         if (!villageking.active) return;
 
         int pdx = (u->x + tileWidth / 2) - (villageking.x + 32);
@@ -172,7 +172,7 @@ void UpdateUnit(Unit* u, tower* cannons, tower* mortars, InfernoTower* infernos,
     }
     else if (u->towerindex == -2)
     {
-        // ¹Ú°İÆ÷ °ø°İ
+        // ë°•ê²©í¬ ê³µê²©
         tower* c = &mortars[u->targetIndex];
         if (!c->active) return;
 
@@ -210,7 +210,7 @@ void UpdateUnit(Unit* u, tower* cannons, tower* mortars, InfernoTower* infernos,
 
     else if (u->towerindex == -3)
     {
-        // ÀÎÆä °ø°İ
+        // ì¸í˜ ê³µê²©
         //tower* c = &infernos[u->targetIndex];
         InfernoTower* c = &infernos[u->targetIndex];
         if (!c->active) return;
@@ -247,7 +247,7 @@ void UpdateUnit(Unit* u, tower* cannons, tower* mortars, InfernoTower* infernos,
         }
     }
     else {
-        // ´ëÆ÷ °ø°İ
+        // ëŒ€í¬ ê³µê²©
         tower* c = &cannons[u->targetIndex];
         if (!c->active) return;
 
@@ -299,7 +299,7 @@ void InfernoAttack(int stageIdx) {
         BOOL valid = FALSE;
         int tx = 0, ty = 0;
 
-        // ÇöÀç Å¸°Ù À¯È¿¼º °Ë»ç
+        // í˜„ì¬ íƒ€ê²Ÿ ìœ íš¨ì„± ê²€ì‚¬
         if (t->isAttacking) {
             Unit* target = FindUnit(t->targetId);
 
@@ -316,19 +316,19 @@ void InfernoAttack(int stageIdx) {
             }
         }
 
-        // Å¸°ÙÀÌ ¹«È¿ÇÏ¸é ¸®¼Â
+        // íƒ€ê²Ÿì´ ë¬´íš¨í•˜ë©´ ë¦¬ì…‹
         if (!valid) {
             t->isAttacking = FALSE;
             t->targetId = -1;
         }
 
-        // »õ Å¸°Ù Å½»ö
+        // ìƒˆ íƒ€ê²Ÿ íƒìƒ‰
         if (!t->isAttacking) {
             float minDist = 999999.0f;
             int bestIdx = -1;
 
             for (int j = 0; j < (int)units.size(); j++) {
-                if (infernoTargetUsed[j]) continue; // ´Ù¸¥ ÀÎÆä¸£³ë°¡ ÀÌ¹Ì Å¸°ÙÆÃÇÑ À¯´ÖÀÌ¸é °Ç³Ê¶Ü
+                if (infernoTargetUsed[j]) continue; // ë‹¤ë¥¸ ì¸í˜ë¥´ë…¸ê°€ ì´ë¯¸ íƒ€ê²ŸíŒ…í•œ ìœ ë‹›ì´ë©´ ê±´ë„ˆëœ€
 
                 Unit* target = &units[j];
 
@@ -355,7 +355,7 @@ void InfernoAttack(int stageIdx) {
                 tx = target->x + tileWidth / 2;
                 ty = target->y + tileHeight / 2;
 
-                // Áßº¹ ÀÌÆåÆ® ¹æÁö
+                // ì¤‘ë³µ ì´í™íŠ¸ ë°©ì§€
                 BOOL exists = FALSE;
                 for (int k = 0; k < infernoEffectCount; k++) {
                     if (infernoEffects[k].active &&
@@ -384,7 +384,7 @@ void InfernoAttack(int stageIdx) {
             }
         }
 
-        // µ¥¹ÌÁö Ã³¸®
+        // ë°ë¯¸ì§€ ì²˜ë¦¬
         if (t->isAttacking && valid) {
             Unit* target = FindUnit(t->targetId);
 
@@ -398,7 +398,7 @@ void InfernoAttack(int stageIdx) {
     }
 }
 
-// ÀÎÆä¸£³ë È¿°úÀÇ ºñÈ°¼ºÈ­¿Í ¼ö¸í °¨¼Ò¸¦ Ã³¸®ÇÑ´Ù. (ÀÌÀü¿¡´Â ±×¸®±â ÄÚµå ¾È¿¡¼­ Ã³¸®ÇÏ´ø ºÎºĞ)
+// ì¸í˜ë¥´ë…¸ íš¨ê³¼ì˜ ë¹„í™œì„±í™”ì™€ ìˆ˜ëª… ê°ì†Œë¥¼ ì²˜ë¦¬í•œë‹¤. (ì´ì „ì—ëŠ” ê·¸ë¦¬ê¸° ì½”ë“œ ì•ˆì—ì„œ ì²˜ë¦¬í•˜ë˜ ë¶€ë¶„)
 void UpdateInfernoEffects(int stageIdx) {
     for (int i = 0; i < infernoEffectCount; i++) {
         if (!infernoEffects[i].active) continue;
@@ -424,13 +424,13 @@ void UpdateInfernoEffects(int stageIdx) {
 
 void UpdateTowerCooldowns(int stageIdx)
 {
-    // [0] Å¸¿ö °ø°İ Äğ´Ù¿î °¨¼Ò - ¿Å°Ü¾ßÇÔ 
+    // [0] íƒ€ì›Œ ê³µê²© ì¿¨ë‹¤ìš´ ê°ì†Œ - ì˜®ê²¨ì•¼í•¨ 
     for (int i = 0; i < cannonCount[stageIdx]; i++) {
         if (cannons[stageIdx][i].attackCooldown > 0)
             cannons[stageIdx][i].attackCooldown--;
     }
 }
-// RemoveDeadEntities()¿¡ ÇØ´ç -----------------------------------------------------------------------
+// RemoveDeadEntities()ì— í•´ë‹¹ -----------------------------------------------------------------------
 void RemoveDeadUnits(void)
 {
     units.erase(std::remove_if(units.begin(), units.end(),
@@ -439,16 +439,16 @@ void RemoveDeadUnits(void)
 
 void UpdateUnits(int stageIdx)
 {
-    // ÀÌµ¿ °ø°İ Ã³¸® ¿Å°Ü¾ßÇÔ
+    // ì´ë™ ê³µê²© ì²˜ë¦¬ ì˜®ê²¨ì•¼í•¨
     for (Unit& u : units)
         UpdateUnit(&u, cannons[stageIdx], mortars[stageIdx], infernos[stageIdx], infernoCount[stageIdx], mortarCount[stageIdx], cannonCount[stageIdx], u.IsRanged(), stageIdx);
-    // ÀÌµ¿ °ø°İ Ã³¸® ³¡
+    // ì´ë™ ê³µê²© ì²˜ë¦¬ ë
 }
 
 void UpdateArrows(int stageIdx)
 {
-    // ¿©±âµµ ¿Å°Ü¾ß ÇÔ 
-            // È­»ì ÀÌÆåÆ® ÀÌµ¿ ¹× Ãæµ¹ ÆÇÁ¤
+    // ì—¬ê¸°ë„ ì˜®ê²¨ì•¼ í•¨ 
+            // í™”ì‚´ ì´í™íŠ¸ ì´ë™ ë° ì¶©ëŒ íŒì •
     for (int i = 0; i < arrowEffectCount; ) {
         ArrowEffect* arrow = &arrowEffects[i];
         if (!arrow->active) {
@@ -467,14 +467,14 @@ void UpdateArrows(int stageIdx)
         if (dist < 10.0f || arrow->life <= 0) {
 
             if (arrow->towerindex == -1) {
-                // ¸¶À»È¸°üÀ» Å¸°ÙÇÑ °æ¿ì
+                // ë§ˆì„íšŒê´€ì„ íƒ€ê²Ÿí•œ ê²½ìš°
                 tower* v = &villageking;
                 if (v->active) {
                     v->hp -= arrow->damage;
                     if (v->hp <= 0) {
                         v->hp = 0;
                         v->active = FALSE;
-                        // ¸¶À»È¸°ü ÆÄ±« ½Ã Ã³¸® Ãß°¡ °¡´É
+                        // ë§ˆì„íšŒê´€ íŒŒê´´ ì‹œ ì²˜ë¦¬ ì¶”ê°€ ê°€ëŠ¥
                     }
                 }
             }
@@ -526,17 +526,17 @@ void UpdateArrows(int stageIdx)
             i++;
         }
     }
-    // ¿©±â±îÁö 
+    // ì—¬ê¸°ê¹Œì§€ 
 }
 void UpdateCannonAttacks(int stageIdx)
 {
-    // ¿©±âµµ ¿Å±â±â 
-            // [8] ´ëÆ÷ -> ¹üÀ§ ³» À¯´Ö¿¡°Ô ´ëÆ÷¾Ë ¹ß»ç
+    // ì—¬ê¸°ë„ ì˜®ê¸°ê¸° 
+            // [8] ëŒ€í¬ -> ë²”ìœ„ ë‚´ ìœ ë‹›ì—ê²Œ ëŒ€í¬ì•Œ ë°œì‚¬
     for (int i = 0; i < cannonCount[stageIdx]; i++) {
         tower* c = &cannons[stageIdx][i];
         if (!c->active) continue;
 
-        // °¡Àå °¡±î¿î À¯´Ö Å½»ö
+        // ê°€ì¥ ê°€ê¹Œìš´ ìœ ë‹› íƒìƒ‰
         float minDist = 999999.0f;
         Unit* best = nullptr;
 
@@ -550,7 +550,7 @@ void UpdateCannonAttacks(int stageIdx)
             }
         }
 
-        // À¯´Ö ¹ß°ß ½Ã ´ëÆ÷¾Ë ¹ß»ç
+        // ìœ ë‹› ë°œê²¬ ì‹œ ëŒ€í¬ì•Œ ë°œì‚¬
         if (best && c->attackCooldown == 0) {
             shot shot;
             shot.x = c->x + 32;
@@ -577,12 +577,12 @@ void UpdateCannonAttacks(int stageIdx)
             c->attackCooldown = 15;
         }
     }
-    // ¿©±â±îÁö 
+    // ì—¬ê¸°ê¹Œì§€ 
 }
 void UpdateCannonShots(void)
 {
-    // ¿©±âµµ ¿Å°Ü¾ßÇÔ 
-            //´ëÆ÷¾Ë
+    // ì—¬ê¸°ë„ ì˜®ê²¨ì•¼í•¨ 
+            //ëŒ€í¬ì•Œ
     for (int i = 0; i < cannonShotCount;) {
         shot* p = &cannonShots[i];
         if (!p->active || p->isMortarShot) {
@@ -594,14 +594,14 @@ void UpdateCannonShots(void)
         p->y += p->vy;
         p->life--;
 
-        // Å¸°Ù À¯´ÖÀÌ Á×¾ú°Å³ª »ç¶óÁ³À¸¸é Åº Á¦°Å
+        // íƒ€ê²Ÿ ìœ ë‹›ì´ ì£½ì—ˆê±°ë‚˜ ì‚¬ë¼ì¡Œìœ¼ë©´ íƒ„ ì œê±°
         Unit* target = FindUnit(p->targetId);
         if (!target || target->IsDead()) {
             cannonShots[i] = cannonShots[--cannonShotCount];
             continue;
         }
 
-        //  ÇöÀç À§Ä¡·Î Ãæµ¹ Ã¼Å©
+        //  í˜„ì¬ ìœ„ì¹˜ë¡œ ì¶©ëŒ ì²´í¬
         float tx = target->x + tileWidth / 2;
         float ty = target->y + tileHeight / 2;
 
@@ -617,14 +617,14 @@ void UpdateCannonShots(void)
             continue;
         }
 
-        i++;  // ´ÙÀ½ ÅºÀ¸·Î
+        i++;  // ë‹¤ìŒ íƒ„ìœ¼ë¡œ
     }
-    // ¿©±â±îÁö 
+    // ì—¬ê¸°ê¹Œì§€ 
 }
 void UpdateMortarAttacks(int stageIdx)
 {
-    // ¿©±âµµ ¿Å°Ü¾ßÇÔ 
-            //¹Ú°İÆ÷
+    // ì—¬ê¸°ë„ ì˜®ê²¨ì•¼í•¨ 
+            //ë°•ê²©í¬
     for (int i = 0; i < mortarCount[stageIdx]; i++) {
         tower* m = &mortars[stageIdx][i];
         if (!m->active) continue;
@@ -669,12 +669,12 @@ void UpdateMortarAttacks(int stageIdx)
             m->attackCooldown = 30;
         }
     }
-    // ¿©±â±îÁö 
+    // ì—¬ê¸°ê¹Œì§€ 
 }
 void UpdateMortarShots(void)
 {
-    // ¿©±âµµ ¿Å°Ü¾ßÇÔ 
-            //¹Ú°İÆ÷ Åº
+    // ì—¬ê¸°ë„ ì˜®ê²¨ì•¼í•¨ 
+            //ë°•ê²©í¬ íƒ„
     for (int i = 0; i < cannonShotCount;) {
         shot* p = &cannonShots[i];
         if (!p->active || !p->isMortarShot) {
@@ -682,7 +682,7 @@ void UpdateMortarShots(void)
             continue;
         }
 
-        // Æ÷Åº ÀÌµ¿
+        // í¬íƒ„ ì´ë™
         p->x += p->vx;
         p->y += p->vy;
         p->life--;
@@ -692,7 +692,7 @@ void UpdateMortarShots(void)
             float ty = p->targetY;
             int mortardamage = 80;
 
-            // ¹üÀ§ ¾ÈÀÇ À¯´Ö ÀüÃ¼ °Ë»ç
+            // ë²”ìœ„ ì•ˆì˜ ìœ ë‹› ì „ì²´ ê²€ì‚¬
             for (Unit& u : units) {
                 float ux = u.x + tileWidth / 2;
                 float uy = u.y + tileHeight / 2;
@@ -712,7 +712,7 @@ void UpdateMortarShots(void)
 //---------------------------------------------------------------------------------------
 
 
-// ½Ã°£ °¨¼Ò  ------------------------------------------------------------------
+// ì‹œê°„ ê°ì†Œ  ------------------------------------------------------------------
 void UpdateBattleTime(void)
 {
     Stagetime--;
@@ -722,7 +722,7 @@ void UpdateBattleTime(void)
 }
 // --------------------------------------------------------------------------------------
 
-// ¸¶³ª, Å¸ÀÌ¸Ó ÃÊ±âÈ­(Initialize¿¡ ÇØ´ç) ----------------------------------------------------------
+// ë§ˆë‚˜, íƒ€ì´ë¨¸ ì´ˆê¸°í™”(Initializeì— í•´ë‹¹) ----------------------------------------------------------
 void InitializeBattle(void)
 {
     int earn = earn_star[0] + earn_star[1] + earn_star[2];
@@ -737,7 +737,7 @@ void InitializeBattle(void)
     Stagetime = 180;
 }
 
-// Á¾·á Á¶°Ç (CheckResult¿¡ ÇØ´ç)--------------------------------------------------------------
+// ì¢…ë£Œ ì¡°ê±´ (CheckResultì— í•´ë‹¹)--------------------------------------------------------------
 BOOL CheckStageEnd(int stageIdx)
 {
     int starPlus = 0;
@@ -763,7 +763,7 @@ BOOL CheckStageEnd(int stageIdx)
             }
         }
     }
-    // ½Ã°£ÆÇÁ¤ 
+    // ì‹œê°„íŒì • 
     else if (_tcscmp(timeStr, TEXT("00:00")) == 0)
     {
         gameend = TRUE;

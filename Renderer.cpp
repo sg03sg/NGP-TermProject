@@ -1,5 +1,5 @@
-// Å¬¶óÀÌ¾ğÆ® Àü¿ë µå·ÎÀ× ¸ğµâ. °ÔÀÓ »óÅÂ´Â ÀĞ±â¸¸ ÇÏ°í ¼öÁ¤ÇÏÁö ¾ÊÀ½
-// ºñÆ®¸Ê ¸®¼Ò½ºÀÇ ·Îµå/ÇØÁ¦¿Í È­¸é »óÅÂº° ±×¸®±â¸¦ ´ã´çÇÑ´Ù.
+ï»¿// í´ë¼ì´ì–¸íŠ¸ ì „ìš© ë“œë¡œì‰ ëª¨ë“ˆ. ê²Œì„ ìƒíƒœëŠ” ì½ê¸°ë§Œ í•˜ê³  ìˆ˜ì •í•˜ì§€ ì•ŠìŒ
+// ë¹„íŠ¸ë§µ ë¦¬ì†ŒìŠ¤ì˜ ë¡œë“œ/í•´ì œì™€ í™”ë©´ ìƒíƒœë³„ ê·¸ë¦¬ê¸°ë¥¼ ë‹´ë‹¹í•œë‹¤.
 #include "Renderer.h"
 #include "RendererGlobals.h"
 #include "resource.h"
@@ -11,7 +11,7 @@
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 940
 
-// ºñÆ®¸Ê ¸®¼Ò½º
+// ë¹„íŠ¸ë§µ ë¦¬ì†ŒìŠ¤
 static HBITMAP  hRightWalkBmp[3], hWalkBmp[3], hgiantsbmp[3], hrightgiantbmp[3], hArcherBmp[3], hrightarcherbmp[3], hLogoBmp, hCannonBmp, hmortarbmp, hInfernoBmp, harrowBmp, hcannonBallBmp, hvillagekingBmp, hui0bmp, hui1bmp, hui2bmp, hui3bmp, hui4bmp, hui5bmp, hui6bmp, endvbmp, enddbmp;
 static BITMAP bmpRightWalk[3], bmpWalk[3], bmpgiants[3], bmprightgiant[3], bmprightarcher[3], aWalk[3], bmpLogo, bmpCannon, bmpmortar, bmpInferno, bmpArrow, bmpCannonBall, bmpvillageking, bmpui0, bmpui1, bmpui2, bmpui3, bmpui4, bmpui5, bmpui6, bmpendv, bmpendd;
 static HBITMAP hStageMap[3];
@@ -20,13 +20,13 @@ static HBITMAP hDoorFrames[5], hMenuBg, hShopMap, hshopbababmp, hshoparcherbmp, 
 static BITMAP bmpDoorFrames[5], bmpMenuBg, bmpShopMap, bmpshopbaba, bmpshoparcher, bmpshopgiant;
 
 static const TCHAR* tips[] = {
-    _T("Tip: Àü·«À» Àß ¼¼¿ö ½ºÅ×ÀÌÁö¸¦ Å¬¸®¾îÇØ º¸¼¼¿ä."),
-    _T("Tip: Å¬¸®¾î°¡ Èûµé´Ù¸é ¾÷±×·¹ÀÌµå¸¦ È°¿ëÇØ º¸¼¼¿ä."),
-    _T("Tip: º° 3°³ µµ´Ş ½Ã 2½ºÅ×ÀÌÁö ÁøÀÔ ¹× ¾ÆÃ³ ÇØ±İÀÔ´Ï´Ù."),
-    _T("Tip: º° 6°³ µµ´Ş ½Ã 3½ºÅ×ÀÌÁö ÁøÀÔ ¹× ÀÚÀÌ¾ğÆ® ÇØ±İÀÔ´Ï´Ù.")
+    _T("Tip: ì „ëµì„ ì˜ ì„¸ì›Œ ìŠ¤í…Œì´ì§€ë¥¼ í´ë¦¬ì–´í•´ ë³´ì„¸ìš”."),
+    _T("Tip: í´ë¦¬ì–´ê°€ í˜ë“¤ë‹¤ë©´ ì—…ê·¸ë ˆì´ë“œë¥¼ í™œìš©í•´ ë³´ì„¸ìš”."),
+    _T("Tip: ë³„ 3ê°œ ë„ë‹¬ ì‹œ 2ìŠ¤í…Œì´ì§€ ì§„ì… ë° ì•„ì²˜ í•´ê¸ˆì…ë‹ˆë‹¤."),
+    _T("Tip: ë³„ 6ê°œ ë„ë‹¬ ì‹œ 3ìŠ¤í…Œì´ì§€ ì§„ì… ë° ìì´ì–¸íŠ¸ í•´ê¸ˆì…ë‹ˆë‹¤.")
 };
 
-// ¸®¼Ò½º ·Îµå / ÇØÁ¦ ----------------------------------------------------------------------------------------------------------------------------------
+// ë¦¬ì†ŒìŠ¤ ë¡œë“œ / í•´ì œ ----------------------------------------------------------------------------------------------------------------------------------
 BOOL Renderer_Init(HINSTANCE hInst) {
     hMenuBg = static_cast<HBITMAP>(LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP24), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
     if (hMenuBg) GetObject(hMenuBg, sizeof(BITMAP), &bmpMenuBg);
@@ -169,15 +169,15 @@ void Renderer_Shutdown(void) {
     DeleteBmp(&hshopgiantbmp);
 }
 
-// È­¸é »óÅÂº° ±×¸®±â ----------------------------------------------------------------------------------------------------------------------------------
-//¹Ú°İÆ÷ Åº
+// í™”ë©´ ìƒíƒœë³„ ê·¸ë¦¬ê¸° ----------------------------------------------------------------------------------------------------------------------------------
+//ë°•ê²©í¬ íƒ„
 static void drawShot(HDC hdc, shot* p) {
     float drawX = p->x;
     float drawY = p->y;
     int size = p->isMortarShot ? 24 : 10;
     if (p->isMortarShot) {
         float t = (float)(p->totalLife - p->life) / (float)p->totalLife;
-        float height = -50 * t * (1.0f - t); // Æ÷¹°¼± ¿¬Ãâ
+        float height = -50 * t * (1.0f - t); // í¬ë¬¼ì„  ì—°ì¶œ
         drawY += height;
     }
     drawX -= size / 2.0f;
@@ -200,7 +200,7 @@ static void DrawHealthBar(HDC hDC, int x, int y, int width, int height, int hp, 
 }
 
 static void DrawLoadingScreen(HDC hDC, HDC mDC, int width, int height) {
-    // ¹è°æ
+    // ë°°ê²½
     RECT screenRect{ 0, 0, width, height };
 
     FillRect(mDC, &screenRect, CreateSolidBrush(RGB(20, 20, 20)));
@@ -235,7 +235,7 @@ static void DrawMenuScreen(HDC mDC, int width, int height) {
         DeleteDC(memDC);
     }
 
-    // ¸Ş´º ¹® Ãâ·Â
+    // ë©”ë‰´ ë¬¸ ì¶œë ¥
     for (int i = 0; i < DOOR_COUNT; i++) {
         HDC doorDC = CreateCompatibleDC(mDC);
         SelectObject(doorDC, hDoorFrames[doorFrameIndices[i]]);
@@ -244,7 +244,7 @@ static void DrawMenuScreen(HDC mDC, int width, int height) {
         DeleteDC(doorDC);
     }
 
-    // ¸Ş´º ¹Ù¹Ù¸®¾È Ãâ·Â
+    // ë©”ë‰´ ë°”ë°”ë¦¬ì•ˆ ì¶œë ¥
     if (barbarianEntering[0] == TRUE || barbarianEntering[1] == TRUE || barbarianEntering[2] == TRUE)
     {
         HDC babaDC = CreateCompatibleDC(mDC);
@@ -256,23 +256,23 @@ static void DrawMenuScreen(HDC mDC, int width, int height) {
         DeleteDC(babaDC);
     }
 
-    // »óÁ¡ ¹öÆ° Ãâ·Â
+    // ìƒì  ë²„íŠ¼ ì¶œë ¥
     RECT shop = shopButton;
     SetBkMode(mDC, TRANSPARENT);
     SetTextColor(mDC, RGB(255, 255, 255));
     HBRUSH btnBrush = CreateSolidBrush(RGB(100, 60, 150));
     FillRect(mDC, &shop, btnBrush);
     FrameRect(mDC, &shop, (HBRUSH)GetStockObject(WHITE_BRUSH));
-    DrawText(mDC, _T("»óÁ¡"), -1, &shop, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    DrawText(mDC, _T("ìƒì "), -1, &shop, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     DeleteObject(btnBrush);
     HFONT hFont = CreateFont(
         36, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, _T("¸¼Àº °íµñ")
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, _T("ë§‘ì€ ê³ ë”•")
     );
     HFONT hOldFont = (HFONT)SelectObject(mDC, hFont);
     TCHAR starText[30];
-    wsprintf(starText, _T("¡Ú º° : %d"), starCount);
+    wsprintf(starText, _T("â˜… ë³„ : %d"), starCount);
     SetBkMode(mDC, TRANSPARENT);
     SetTextColor(mDC, RGB(255, 255, 0));
     TextOut(mDC, uis[3].x + 40, uis[3].y, starText, lstrlen(starText));
@@ -309,11 +309,11 @@ static void DrawShopScreen(HDC mDC) {
     HFONT hFont = CreateFont(
         36, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, _T("¸¼Àº °íµñ")
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, _T("ë§‘ì€ ê³ ë”•")
     );
     HFONT hOldFont = (HFONT)SelectObject(mDC, hFont);
     TCHAR starText[30];
-    wsprintf(starText, _T("¡Ú º° : %d"), starCount);
+    wsprintf(starText, _T("â˜… ë³„ : %d"), starCount);
     SetBkMode(mDC, TRANSPARENT);
     SetTextColor(mDC, RGB(255, 255, 0));
     TextOut(mDC, uis[3].x + 40, uis[3].y, starText, lstrlen(starText));
@@ -323,31 +323,31 @@ static void DrawShopScreen(HDC mDC) {
 
     SetTextColor(mDC, RGB(255, 0, 0));
     Rectangle(mDC, btnAtk.left, btnAtk.top, btnAtk.right, btnAtk.bottom);
-    DrawText(mDC, _T("°ø°İ·Â +"), -1, &btnAtk, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    DrawText(mDC, _T("ê³µê²©ë ¥ +"), -1, &btnAtk, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     Rectangle(mDC, btnSpeed.left, btnSpeed.top, btnSpeed.right, btnSpeed.bottom);
-    DrawText(mDC, _T("ÀÌµ¿¼Óµµ +"), -1, &btnSpeed, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    DrawText(mDC, _T("ì´ë™ì†ë„ +"), -1, &btnSpeed, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     Rectangle(mDC, btnRate.left, btnRate.top, btnRate.right, btnRate.bottom);
-    DrawText(mDC, _T("°ø°İ¼Óµµ +"), -1, &btnRate, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    DrawText(mDC, _T("ê³µê²©ì†ë„ +"), -1, &btnRate, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     TCHAR atklevel[20];
-    wsprintf(atklevel, _T("·¹º§ : %d"), unitAtk);
+    wsprintf(atklevel, _T("ë ˆë²¨ : %d"), unitAtk);
     SetTextColor(mDC, RGB(255, 0, 255));
     TextOut(mDC, btnAtk.right + 50, (btnAtk.bottom + btnAtk.top) / 2, atklevel, lstrlen(atklevel));
 
     TCHAR speedlevel[20];
-    wsprintf(speedlevel, _T("·¹º§ : %d"), unitSpeed);
+    wsprintf(speedlevel, _T("ë ˆë²¨ : %d"), unitSpeed);
     TextOut(mDC, btnSpeed.right + 50, (btnSpeed.bottom + btnSpeed.top) / 2, speedlevel, lstrlen(speedlevel));
 
     TCHAR atk_speedlevel[20];
-    wsprintf(atk_speedlevel, _T("·¹º§ : %d"), unitRate);
+    wsprintf(atk_speedlevel, _T("ë ˆë²¨ : %d"), unitRate);
     TextOut(mDC, btnRate.right + 50, (btnRate.bottom + btnRate.top) / 2, atk_speedlevel, lstrlen(atk_speedlevel));
 
     RECT btnupgrade = { uis[3].x, 960 - uis[3].y - 150, uis[3].x + 150, 960 - uis[3].y - 100 };
     Rectangle(mDC, uis[3].x, 960 - uis[3].y - 150, uis[3].x + 150, 960 - uis[3].y - 100);
     SetTextColor(mDC, RGB(0, 0, 0));
-    DrawText(mDC, _T("¾÷±×·¹ÀÌµå ÃÊ±âÈ­"), -1, &btnupgrade, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    DrawText(mDC, _T("ì—…ê·¸ë ˆì´ë“œ ì´ˆê¸°í™”"), -1, &btnupgrade, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
 }
 
@@ -457,28 +457,28 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
         shot* p = &cannonShots[i];
         if (!p->active) continue;
 
-        // Åº Å©±â °áÁ¤
+        // íƒ„ í¬ê¸° ê²°ì •
         int size = p->isMortarShot ? 24 : 10;
 
-        // À§Ä¡ °è»ê
-        float drawX = p->x - size / 2.0f;  // Áß¾Ó Á¤·Ä
+        // ìœ„ì¹˜ ê³„ì‚°
+        float drawX = p->x - size / 2.0f;  // ì¤‘ì•™ ì •ë ¬
         float drawY = p->y - size / 2.0f;
 
-        // ¹Ú°İÆ÷´Â Æ÷¹°¼± ±ËÀû º¸Á¤
+        // ë°•ê²©í¬ëŠ” í¬ë¬¼ì„  ê¶¤ì  ë³´ì •
         if (p->isMortarShot) {
             float t = (float)(p->totalLife - p->life) / (float)p->totalLife;
             float height = -50.0f * t * (1.0f - t);
             drawY += height;
         }
 
-        // Åº ±×¸®±â
+        // íƒ„ ê·¸ë¦¬ê¸°
         SelectObject(paintDC, hcannonBallBmp);
         COLORREF cannon_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, (int)drawX, (int)drawY, size, size, paintDC, 0, 0,
             bmpCannonBall.bmWidth, bmpCannonBall.bmHeight, cannon_back_color);
     }
 
-    //¸¶À»È¸°ü
+    //ë§ˆì„íšŒê´€
     if (villageking.active)
     {
         SelectObject(paintDC, hvillagekingBmp);
@@ -489,7 +489,7 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
         DrawHealthBar(mDC, villageking.x, villageking.y, 64, 6, villageking.hp, villageking.maxHp);
     }
 
-    //Ä³¸¯ÅÍ uiÃ¢
+    //ìºë¦­í„° uiì°½
 
     TextOut(mDC, uis[3].x + 70, uis[3].y + 60, timeStr, lstrlen(timeStr));
 
@@ -541,41 +541,41 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
     TextOut(mDC, uis[2].x + 20, uis[2].y + 40, buffer, lstrlen(buffer));
     DeleteObject(blue_mana);
 
-    //º°
+    //ë³„
     if (towercount[stageIdx] >= naturaltowercount[stageIdx] * 0.7f) {
-        // Ã¹ ¹øÂ° º°: 70% ÀÌ»óÀÏ ¶§
+        // ì²« ë²ˆì§¸ ë³„: 70% ì´ìƒì¼ ë•Œ
         SelectObject(paintDC, hui5bmp);
         COLORREF ui5_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, uis[3].x, uis[3].y, uis[3].length, uis[3].height, paintDC, 0, 0, bmpui5.bmWidth, bmpui5.bmHeight, ui5_back_color);
     }
     else {
-        // º° ¾øÀ» ¶§
+        // ë³„ ì—†ì„ ë•Œ
         SelectObject(paintDC, hui6bmp);
         COLORREF ui6_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, uis[3].x, uis[3].y, uis[3].length, uis[3].height, paintDC, 0, 0, bmpui6.bmWidth, bmpui6.bmHeight, ui6_back_color);
     }
 
     if (towercount[stageIdx] >= naturaltowercount[stageIdx] * 0.4f) {
-        // µÎ ¹øÂ° º°: 40% ÀÌ»óÀÏ ¶§
+        // ë‘ ë²ˆì§¸ ë³„: 40% ì´ìƒì¼ ë•Œ
         SelectObject(paintDC, hui5bmp);
         COLORREF ui5_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, uis[3].x + 60, uis[3].y, uis[3].length, uis[3].height, paintDC, 0, 0, bmpui5.bmWidth, bmpui5.bmHeight, ui5_back_color);
     }
     else {
-        // º° ¾øÀ» ¶§
+        // ë³„ ì—†ì„ ë•Œ
         SelectObject(paintDC, hui6bmp);
         COLORREF ui6_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, uis[3].x + 60, uis[3].y, uis[3].length, uis[3].height, paintDC, 0, 0, bmpui6.bmWidth, bmpui6.bmHeight, ui6_back_color);
     }
 
     if (villageking.active) {
-        // ¸¶À» È¸°ü È°¼ºÈ­ ½Ã º° Ç¥½Ã
+        // ë§ˆì„ íšŒê´€ í™œì„±í™” ì‹œ ë³„ í‘œì‹œ
         SelectObject(paintDC, hui5bmp);
         COLORREF ui5_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, uis[3].x + 120, uis[3].y, uis[3].length, uis[3].height, paintDC, 0, 0, bmpui5.bmWidth, bmpui5.bmHeight, ui5_back_color);
     }
     else {
-        // ¸¶À» È¸°ü ºñÈ°¼ºÈ­ ½Ã º° ¾ø°Å³ª ´Ù¸¥ Ç¥½Ã
+        // ë§ˆì„ íšŒê´€ ë¹„í™œì„±í™” ì‹œ ë³„ ì—†ê±°ë‚˜ ë‹¤ë¥¸ í‘œì‹œ
         SelectObject(paintDC, hui6bmp);
         COLORREF ui6_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, uis[3].x + 120, uis[3].y, uis[3].length, uis[3].height, paintDC, 0, 0, bmpui6.bmWidth, bmpui6.bmHeight, ui6_back_color);
@@ -586,7 +586,7 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
     }
 }
 
-// ÀÎÆä¸£³ë °ø°İ ±×¸®±â
+// ì¸í˜ë¥´ë…¸ ê³µê²© ê·¸ë¦¬ê¸°
 static void DrawInfernoEffects(HDC mDC, int stageIdx) {
     for (int i = 0; i < infernoEffectCount; i++) {
         if (!infernoEffects[i].active) continue;
@@ -622,14 +622,14 @@ static void DRAWENDScreen(HWND hWnd, HDC mDC, HDC paintDC)
     {
         SelectObject(paintDC, endvbmp);
         StretchBlt(mDC, 0, 0, bkrect.right, bkrect.bottom, paintDC, 0, 0, bmpendv.bmWidth, bmpendv.bmHeight, SRCCOPY);
-        HFONT hFont = CreateFont(60, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, TEXT("¸¼Àº °íµñ"));
+        HFONT hFont = CreateFont(60, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, TEXT("ë§‘ì€ ê³ ë”•"));
 
         HFONT hOldFont = (HFONT)SelectObject(mDC, hFont);
 
         SetBkMode(mDC, TRANSPARENT);
         SetTextColor(mDC, RGB(0, 0, 0));
         RECT rect = { 300, 650, 800, 780 };
-        DrawText(mDC, TEXT("°ÔÀÓ½Â¸®!\n¾Æ¹« °÷ÀÌ³ª Å¬¸¯ÇÏ¼¼¿ä"), -1, &rect, DT_LEFT | DT_TOP | DT_WORDBREAK);
+        DrawText(mDC, TEXT("ê²Œì„ìŠ¹ë¦¬!\nì•„ë¬´ ê³³ì´ë‚˜ í´ë¦­í•˜ì„¸ìš”"), -1, &rect, DT_LEFT | DT_TOP | DT_WORDBREAK);
 
         SelectObject(mDC, hOldFont);
         DeleteObject(hFont);
@@ -639,14 +639,14 @@ static void DRAWENDScreen(HWND hWnd, HDC mDC, HDC paintDC)
     {
         SelectObject(paintDC, enddbmp);
         StretchBlt(mDC, 0, 0, bkrect.right, bkrect.bottom, paintDC, 0, 0, bmpendd.bmWidth, bmpendd.bmHeight, SRCCOPY);
-        HFONT hFont = CreateFont(60, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, TEXT("¸¼Àº °íµñ"));
+        HFONT hFont = CreateFont(60, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, TEXT("ë§‘ì€ ê³ ë”•"));
 
         HFONT hOldFont = (HFONT)SelectObject(mDC, hFont);
 
         SetBkMode(mDC, TRANSPARENT);
         SetTextColor(mDC, RGB(0, 0, 0));
         RECT rect = { 300, 650, 800, 780 };
-        DrawText(mDC, TEXT("°ÔÀÓÆĞ¹è..\n¾Æ¹« °÷ÀÌ³ª Å¬¸¯ÇÏ¼¼¿ä"), -1, &rect, DT_LEFT | DT_TOP | DT_WORDBREAK);
+        DrawText(mDC, TEXT("ê²Œì„íŒ¨ë°°..\nì•„ë¬´ ê³³ì´ë‚˜ í´ë¦­í•˜ì„¸ìš”"), -1, &rect, DT_LEFT | DT_TOP | DT_WORDBREAK);
 
         SelectObject(mDC, hOldFont);
         DeleteObject(hFont);
@@ -769,7 +769,7 @@ static void Drawblock(HDC mDC, int stageIdx)
 
 }
 
-// WM_PAINT ¿¡¼­ È£ÃâÇÑ´Ù. ¹é¹öÆÛ¿¡ ±×¸° µÚ hDC ·Î ÇÑ ¹ø¿¡ º¹»çÇÑ´Ù.
+// WM_PAINT ì—ì„œ í˜¸ì¶œí•œë‹¤. ë°±ë²„í¼ì— ê·¸ë¦° ë’¤ hDC ë¡œ í•œ ë²ˆì— ë³µì‚¬í•œë‹¤.
 void Renderer_Paint(HWND hWnd, HDC hDC) {
     HDC mDC = CreateCompatibleDC(hDC);
     HDC paintDC = CreateCompatibleDC(hDC);

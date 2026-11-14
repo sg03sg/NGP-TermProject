@@ -1,4 +1,4 @@
-#include <windows.h>
+ï»¿#include <windows.h>
 #include <tchar.h>
 #include <stdbool.h>
 #include <math.h>
@@ -87,9 +87,9 @@ BOOL doorOpenings[DOOR_COUNT] = { FALSE, FALSE, FALSE };
 BOOL barbarianEntering[DOOR_COUNT] = { FALSE, FALSE, FALSE };
 int enteringIndex = -1;
 RECT doorRects[3] = {
-    { 400, 350, 500, 450 },  // ¹® 1 (64x64)
-    { 600, 350, 700, 450 },  // ¹® 2
-    { 800, 350, 900, 450 }   // ¹® 3
+    { 400, 350, 500, 450 },  // ë¬¸ 1 (64x64)
+    { 600, 350, 700, 450 },  // ë¬¸ 2
+    { 800, 350, 900, 450 }   // ë¬¸ 3
 };
 
 GameState targetStages[DOOR_COUNT] = {
@@ -103,19 +103,19 @@ int unitAtk = 0;
 int unitSpeed = 0;
 int unitRate = 0;
 int currentStageIdx = 0;
-POINT barbarianPos = { 0 }; // ¸Ş´º Àü¿ë ¹Ù¹Ù¸®¾È À§Ä¡
-int barbarianMenuFrame = 0; // ¸Ş´º Àü¿ë ÇÁ·¹ÀÓ
+POINT barbarianPos = { 0 }; // ë©”ë‰´ ì „ìš© ë°”ë°”ë¦¬ì•ˆ ìœ„ì¹˜
+int barbarianMenuFrame = 0; // ë©”ë‰´ ì „ìš© í”„ë ˆì„
 
 RECT stageButtons[3];
 RECT shopButton;
-RECT shopExitButton = { 1160, 210, 1210, 260 };  // Àû´çÇÑ À§Ä¡·Î ¼öÁ¤ °¡´É
+RECT shopExitButton = { 1160, 210, 1210, 260 };  // ì ë‹¹í•œ ìœ„ì¹˜ë¡œ ìˆ˜ì • ê°€ëŠ¥
 RECT shopunit = { 0,270,300,400 };
 
 int upgradelevel[3] = { 0 };
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
-// ¸Ê ÃÊ±âÈ­ 
+// ë§µ ì´ˆê¸°í™” 
 void InitGame(HWND hWnd) {
 
     showGrid = FALSE;
@@ -138,7 +138,7 @@ void InitGame(HWND hWnd) {
     cannons[0][2] = tower{ 655, 420, TRUE, 300, 300, 10 };
     cannons[0][3] = tower{ 610, 410, TRUE, 300, 300, 10 };
     cannons[1][0] = tower{ 686, 412, TRUE, 300, 300, 10 };
-    cannons[1][1] = tower{ 640, 445, TRUE, 300, 300, 10 }; //ÇÑ Ä­ y =20 x =30
+    cannons[1][1] = tower{ 640, 445, TRUE, 300, 300, 10 }; //í•œ ì¹¸ y =20 x =30
     cannons[1][2] = tower{ 583, 398, TRUE, 300, 300, 10 };
     cannons[1][3] = tower{ 645, 366, TRUE, 300, 300, 10 };
     mortars[1][0] = tower{ 658, 423, TRUE, 300, 300, 10,200 };
@@ -174,13 +174,13 @@ void InitGame(HWND hWnd) {
 
     menusoundplay = FALSE;
 
-    // ÃÊ±âÈ­½Ã Å¸ÀÌ¸Ó ¼³Á¤
+    // ì´ˆê¸°í™”ì‹œ íƒ€ì´ë¨¸ ì„¤ì •
     GameFramework::SetSpeed(1.0);
     GameFramework::KillTimer(IDT_STAGE_TIMER);
     GameFramework::StartTimer(IDT_ANIM_TIMER, 200);
 }
 
-// °ÔÀÓ ¸®¼Â
+// ê²Œì„ ë¦¬ì…‹
 void reset_game(HWND hWnd)
 {
     InitGame(hWnd);
@@ -207,7 +207,7 @@ void AddArrowEffect(ArrowEffect effect) {
     arrowEffects[arrowEffectCount++] = effect;
 }
 
-// È­¸é »óÅÂ¿¡ ¸Â´Â ¹è°æÀ½À¸·Î ÀüÈ¯ÇÑ´Ù.
+// í™”ë©´ ìƒíƒœì— ë§ëŠ” ë°°ê²½ìŒìœ¼ë¡œ ì „í™˜í•œë‹¤.
 static void UpdateBgm(void)
 {
     if (isLoading)
@@ -241,7 +241,7 @@ void UpdateUnlockStatus() {
 }
 
 
-// Æ½¸¶´Ù °ÔÀÓ Å¸ÀÌ¸Ó¿¡ µû¶ó ÀÏ Ã³¸®
+// í‹±ë§ˆë‹¤ ê²Œì„ íƒ€ì´ë¨¸ì— ë”°ë¼ ì¼ ì²˜ë¦¬
 static void OnGameTimer(int timerId)
 {
     if (gameState >= STATE_STAGE1 && gameState <= STATE_STAGE3)
@@ -317,7 +317,7 @@ static void OnGameTimer(int timerId)
 
         RemoveDeadUnits();
 
-        // À¯´Ö ÇÁ·¹ÀÓ ¾Ö´Ï¸ŞÀÌ¼Ç
+        // ìœ ë‹› í”„ë ˆì„ ì• ë‹ˆë©”ì´ì…˜
         for (Unit& u : units) {
             if (u.GetType() != UnitType::Giant)
                 u.AdvanceFrame();
@@ -350,7 +350,7 @@ static void OnGameTimer(int timerId)
     }
 }
 
-// »óÁ¡ ¾÷±×·¹ÀÌµå¸¦ ¹İ¿µÇØ À¯´ÖÀ» ¼ÒÈ¯ÇÑ´Ù
+// ìƒì  ì—…ê·¸ë ˆì´ë“œë¥¼ ë°˜ì˜í•´ ìœ ë‹›ì„ ì†Œí™˜í•œë‹¤
 static void SpawnPlayerUnit(UnitType type, int x, int y, int targetX, int targetY, int targetIndex)
 {
     UnitStats stats = GetUnitStats(type);
@@ -362,7 +362,7 @@ static void SpawnPlayerUnit(UnitType type, int x, int y, int targetX, int target
         unit->SetTarget(targetX, targetY, targetIndex);
 }
 
-// Áö±İÀº ¼Ö·Î °ÔÀÓ ÀüÃ¼¸¦ ÇÏ³ªÀÇ ¸ğµå·Î °¨½Ñ´Ù. ÀÌÈÄ ·Îµù/¸Ş´º/ÀüÅõ µîÀ¸·Î ³ª´«´Ù.
+// ì§€ê¸ˆì€ ì†”ë¡œ ê²Œì„ ì „ì²´ë¥¼ í•˜ë‚˜ì˜ ëª¨ë“œë¡œ ê°ì‹¼ë‹¤. ì´í›„ ë¡œë”©/ë©”ë‰´/ì „íˆ¬ ë“±ìœ¼ë¡œ ë‚˜ëˆˆë‹¤.
 class MainGameMode : public GameMode {
 public:
     void OnTimer(int timerId) override { OnGameTimer(timerId); }
@@ -389,7 +389,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdPa
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
 
-    GameFramework::StartTimer(IDT_LOADING_TIMER, 100, false);   // ·ÎµùÀº ¹è¼ÓÀÇ ¿µÇâÀ» ¹ŞÁö ¾Ê´Â´Ù
+    GameFramework::StartTimer(IDT_LOADING_TIMER, 100, false);   // ë¡œë”©ì€ ë°°ì†ì˜ ì˜í–¥ì„ ë°›ì§€ ì•ŠëŠ”ë‹¤
     GameFramework::StartTimer(IDT_ANIM_TIMER, 200);
 
     return GameFramework::Run(hWnd, &mainMode);
@@ -408,9 +408,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
         }
         Renderer_Init(g_hInst);
         InitGame(hWnd);
-        //isLoading = FALSE; // ÁÖ¼®Ã³¸®·Î ·Îµù ²ô±â °¡´É
+        //isLoading = FALSE; // ì£¼ì„ì²˜ë¦¬ë¡œ ë¡œë”© ë„ê¸° ê°€ëŠ¥
         //gameState = STATE_MENU;
-        shopButton = RECT{ 50, 800, 200, 860 };  // ÁÂÃø ÇÏ´Ü ´ë·« À§Ä¡
+        shopButton = RECT{ 50, 800, 200, 860 };  // ì¢Œì¸¡ í•˜ë‹¨ ëŒ€ëµ ìœ„ì¹˜
         break;
 
     case WM_LBUTTONDOWN: {
@@ -462,7 +462,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
             for (int i = 0; i < DOOR_COUNT; i++) {
                 if (PtInRect(&doorRects[i], POINT { x, y })) {
                     if ((i == 1 && !archerUnlocked) || (i == 2 && !giantUnlocked)) {
-                        MessageBox(hWnd, _T("ÇØ´ç ½ºÅ×ÀÌÁö´Â ¾ÆÁ÷ ÇØ±İµÇÁö ¾Ê¾Ò½À´Ï´Ù."), _T("Àá±è"), MB_OK | MB_ICONWARNING);
+                        MessageBox(hWnd, _T("í•´ë‹¹ ìŠ¤í…Œì´ì§€ëŠ” ì•„ì§ í•´ê¸ˆë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤."), _T("ì ê¹€"), MB_OK | MB_ICONWARNING);
                         return 0;
                     }
                     barbarianPos.x = doorRects[i].left - 80;
@@ -630,13 +630,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
             {
                 if (mana - 5 >= 0)
                 {
-                    // Q Å° ¡æ ¹Ù¹Ù¸®¾È
+                    // Q í‚¤ â†’ ë°”ë°”ë¦¬ì•ˆ
                     if (GetAsyncKeyState('Q') & 0x8000 && CountUnits(UnitType::Barbarian) < MAX_UNITS) {
                         SpawnPlayerUnit(UnitType::Barbarian, x, y, tx, ty, targetIdx);
                         mana -= 5;
                     }
 
-                    // W Å° ¡æ ¾ÆÃ³
+                    // W í‚¤ â†’ ì•„ì²˜
                     else if (GetAsyncKeyState('W') & 0x8000 && CountUnits(UnitType::Archer) < MAX_UNITS) {
                         if (!archerUnlocked) return 0;
                         SpawnPlayerUnit(UnitType::Archer, x, y, tx, ty, targetIdx);
