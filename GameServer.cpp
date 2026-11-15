@@ -96,6 +96,14 @@ void GameServer::WorkerLoop() {
     while (running_) {
         // 추후 requestQueue_ 처리 로직이 들어갈 자리
         session_manager_.ReapClosed();   // 끊긴 세션 정리
+
+        // PartyManager 연결 후 로비 세션 목록과 실제 현황으로 교체
+
+        const uint64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+        lobbyBroadcaster_.Tick(nowMs, MakeDefaultLobbyMaps(),
+            session_manager_.GetSessionIds(), session_manager_);
+
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }

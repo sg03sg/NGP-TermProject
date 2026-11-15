@@ -9,33 +9,36 @@ SessionManager::~SessionManager() {
     Clear();
 }
 
-// 실패하면 -1을 반환한다. 이 경우 sock은 이 함수 안에서 이미 닫혔으므로 호출자는 다시 닫지 않는다.
 int SessionManager::AddSession(SOCKET sock, GameServer* server) {
-    std::shared_ptr<ClientSession> session;
-    int sessionId = -1;
-    try {
+    int sessionId;
+    {
         std::lock_guard<std::mutex> lock(mutex_);
         sessionId = nextId_++;
+    }
+
+    std::shared_ptr<ClientSession> session;
+    try {
         session = std::make_shared<ClientSession>(server, sock, sessionId);
-        sessions_[sessionId] = session;
     }
     catch (const std::exception& e) {
         std::cout << "[SessionManager] 세션 생성 실패: " << e.what() << std::endl;
-        if (sessionId != -1) {
-            std::lock_guard<std::mutex> lock(mutex_);
-            sessions_.erase(sessionId);
-        }
-        if (!session) closesocket(sock);   // 세션이 만들어졌다면 소멸자가 소켓을 닫는다
+        closesocket(sock);
         return -1;
     }
 
-    // 락 밖에서 스레드 기동
     if (!session->StartReceive()) {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            sessions_.erase(sessionId);
-        }
         std::cout << "[SessionManager] 세션 등록 실패 (Session ID: " << sessionId << ")" << std::endl;
+        return -1;
+    }
+
+    try {
+        std::lock_guard<std::mutex> lock(mutex_);
+        sessions_[sessionId] = session;
+    }
+    catch (const std::exception& e) {
+        std::cout << "[SessionManager] 세션 등록 실패: " << e.what() << std::endl;
+        session->RequestClose();
+        session->Join();
         return -1;
     }
 
@@ -47,6 +50,16 @@ std::shared_ptr<ClientSession> SessionManager::FindSession(int sessionId) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = sessions_.find(sessionId);
     return (it != sessions_.end()) ? it->second : nullptr;
+}
+
+std::vector<int> SessionManager::GetSessionIds() {
+    std::vector<int> ids;
+    std::lock_guard<std::mutex> lock(mutex_);
+    ids.reserve(sessions_.size());
+    for (auto& pair : sessions_) {
+        if (pair.second && pair.second->IsConnected()) ids.push_back(pair.first);
+    }
+    return ids;
 }
 
 void SessionManager::SendToSessions(const std::vector<int>& sessionIds, const char* data, int length) {

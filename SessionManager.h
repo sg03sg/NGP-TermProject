@@ -20,6 +20,7 @@ public:
 
     int AddSession(SOCKET sock, GameServer* server);
     std::shared_ptr<ClientSession> FindSession(int sessionId);
+    std::vector<int> GetSessionIds();
     void SendToSessions(const std::vector<int>& sessionIds, const char* data, int length);
     void RemoveSession(int sessionId);
 

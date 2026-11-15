@@ -5,8 +5,10 @@
 #include <atomic>
 #include <vector>
 #include <memory>
+#include <chrono>
 #include "SessionManager.h"
 #include "ThreadSafeQueue.h"
+#include "LobbyBroadcaster.h"
 
 class GameServer {
 private:
@@ -17,6 +19,7 @@ private:
     std::thread workerThread_;
 
     SessionManager session_manager_;
+    LobbyBroadcaster lobbyBroadcaster_;
 
     void AcceptLoop();
     void WorkerLoop();
