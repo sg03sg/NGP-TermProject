@@ -135,6 +135,7 @@
     <ClCompile Include="BattleLogic.cpp" />
     <ClCompile Include="coc.cpp" />
     <ClCompile Include="GameFramework.cpp" />
+    <ClCompile Include="PacketBuffer.cpp" />
     <ClCompile Include="PacketCodec.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Unit.cpp" />
@@ -142,6 +143,7 @@
   <ItemGroup>
     <ClInclude Include="BattleLogic.h" />
     <ClInclude Include="Message.h" />
+    <ClInclude Include="PacketBuffer.h" />
     <ClInclude Include="PacketCodec.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="RendererGlobals.h" />
