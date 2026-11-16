@@ -33,6 +33,9 @@
     <ClCompile Include="PacketCodec.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="PacketBuffer.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -63,6 +66,9 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="PacketCodec.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="PacketBuffer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
