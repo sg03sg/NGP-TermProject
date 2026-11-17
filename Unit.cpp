@@ -1,10 +1,10 @@
 ﻿#include "Unit.h"
 #include <algorithm>
 
-std::vector<Unit> units;
+//std::vector<Unit> units;
 
 namespace {
-    int nextUnitId = 1;
+    //int nextUnitId = 1;
 
     // 바바리안, 아처, 자이언트 순서
     const UnitStats STATS[] = {
@@ -36,38 +36,4 @@ void Unit::SetTarget(int tx, int ty, int towerIndex) {
     targetIndex = towerIndex;
 }
 
-Unit* SpawnUnit(UnitType type, int x, int y, const UnitStats& stats) {
-    if (CountUnits(type) >= MAX_UNITS) return nullptr;
-
-    // 같은 유닛의 맨 뒤에 넣어 유닛 순서를 유지한다
-    std::vector<Unit>::iterator pos = units.begin();
-    while (pos != units.end() && pos->GetType() <= type)
-        ++pos;
-
-    pos = units.insert(pos, Unit(nextUnitId++, type, x, y, stats));
-    return &*pos;
-}
-
-Unit* FindUnit(int id) {
-    for (Unit& u : units) {
-        if (u.GetId() == id) return &u;
-    }
-    return nullptr;
-}
-
-int CountUnits(UnitType type) {
-    int count = 0;
-    for (const Unit& u : units) {
-        if (u.GetType() == type) count++;
-    }
-    return count;
-}
-
-void ClearUnits() {
-    units.clear();
-}
-
-void ClearUnits(UnitType type) {
-    units.erase(std::remove_if(units.begin(), units.end(),
-        [type](const Unit& u) { return u.GetType() == type; }), units.end());
-}
+// 기존 spawnUnit, FindUnit, CountUnits, ClearUnits를 BattleInstance의 멤버함수로 이동 

@@ -132,6 +132,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BattleInstance.cpp" />
     <ClCompile Include="BattleLogic.cpp" />
     <ClCompile Include="coc.cpp" />
     <ClCompile Include="GameFramework.cpp" />
@@ -141,6 +142,7 @@
     <ClCompile Include="Unit.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BattleInstance.h" />
     <ClInclude Include="BattleLogic.h" />
     <ClInclude Include="Message.h" />
     <ClInclude Include="PacketBuffer.h" />

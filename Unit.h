@@ -56,14 +56,6 @@ private:
     bool isRanged_;
 };
 
-// 전체 유닛. 유닛 순서(바바리안, 아처, 자이언트)로 묶이고 유닛 안에서는 소환 순서를 유지한다
-extern std::vector<Unit> units;
-
-// 유닛당 MAX_UNITS 를 넘으면 nullptr. id 는 소환할 때 한 번 부여하고 다시 쓰지 않는다
-Unit* SpawnUnit(UnitType type, int x, int y, const UnitStats& stats);
-Unit* FindUnit(int id);
-int CountUnits(UnitType type);
-void ClearUnits();
-void ClearUnits(UnitType type);
+// 기존 spawnUnit, FindUnit, CountUnits, ClearUnits를 BattleInstance의 멤버함수로 이동 
 
 #endif

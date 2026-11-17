@@ -7,12 +7,14 @@
 #include "RendererGlobals.h"
 #include "Renderer.h"
 #include "GameFramework.h"
+#include "BattleInstance.h"
 #include <mmsystem.h>
 
 #pragma comment(lib, "msimg32.lib")
 #pragma comment(lib, "winmm.lib")
 
 HINSTANCE g_hInst;
+BattleInstance gameBattle;
 LPCTSTR lpszClass = L"Window Class Name";
 LPCTSTR lpszWindowName = L"Window Programming Lab";
 
@@ -124,7 +126,7 @@ void InitGame(HWND hWnd) {
     showrange = FALSE;
     showblock = FALSE;
 
-    ClearUnits();
+    gameBattle.ClearUnits();
     memset(naturaltowercount, 0, sizeof(naturaltowercount));
 
     arrowEffectCount = cannonShotCount = 0;
@@ -296,8 +298,8 @@ static void OnGameTimer(int timerId)
                 }
                 else {
                     gameState = targetStages[enteringIndex];
-                    ClearUnits(UnitType::Barbarian);
-                    ClearUnits(UnitType::Archer);
+                    gameBattle.ClearUnits(UnitType::Barbarian);
+                    gameBattle.ClearUnits(UnitType::Archer);
                     currentStageIdx = targetStages[enteringIndex] - STATE_STAGE1;
                     doorOpenings[enteringIndex] = FALSE;
                     barbarianEntering[enteringIndex] = FALSE;
@@ -318,7 +320,8 @@ static void OnGameTimer(int timerId)
         RemoveDeadUnits();
 
         // 유닛 프레임 애니메이션
-        for (Unit& u : units) {
+        for (BattleUnit& entry : gameBattle.GetUnits()) {
+            Unit& u = entry.unit;
             if (u.GetType() != UnitType::Giant)
                 u.AdvanceFrame();
         }
@@ -326,7 +329,8 @@ static void OnGameTimer(int timerId)
         giant_frame++;
         if (giant_frame % 2 == 0)
         {
-            for (Unit& u : units) {
+            for (BattleUnit& entry : gameBattle.GetUnits()) {
+                Unit& u = entry.unit;
                 if (u.GetType() == UnitType::Giant)
                     u.AdvanceFrame();
             }
@@ -357,7 +361,8 @@ static void SpawnPlayerUnit(UnitType type, int x, int y, int targetX, int target
     stats.atk += unitAtk;
     stats.speed += unitSpeed;
 
-    Unit* unit = SpawnUnit(type, x, y, stats);
+    //Unit* unit = SpawnUnit(type, x, y, stats);
+    Unit* unit = gameBattle.SpawnUnit(1, type, x, y, stats);
     if (unit)
         unit->SetTarget(targetX, targetY, targetIndex);
 }
@@ -477,7 +482,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
             for (int i = 0; i < 3; i++) {
                 if (PtInRect(&stageButtons[i], POINT { x, y })) {
                     gameState = static_cast<GameState>(STATE_STAGE1 + i);
-                    ClearUnits(UnitType::Barbarian);
+                    gameBattle.ClearUnits(UnitType::Barbarian);
                     InvalidateRect(hWnd, NULL, FALSE);
                 }
             }
@@ -497,7 +502,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
             break;
         }
 
-        else if (gameState >= STATE_STAGE1 && gameState <= STATE_STAGE3 && (CountUnits(UnitType::Barbarian) < MAX_UNITS || CountUnits(UnitType::Archer) < MAX_UNITS)) {
+        else if (gameState >= STATE_STAGE1 && gameState <= STATE_STAGE3 && (gameBattle.CountUnits(UnitType::Barbarian) < MAX_UNITS || gameBattle.CountUnits(UnitType::Archer) < MAX_UNITS)) {
             int stage = 0;
             if (gameState == 2)
                 stage = 1;
@@ -631,20 +636,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
                 if (mana - 5 >= 0)
                 {
                     // Q 키 → 바바리안
-                    if (GetAsyncKeyState('Q') & 0x8000 && CountUnits(UnitType::Barbarian) < MAX_UNITS) {
+                    if (GetAsyncKeyState('Q') & 0x8000 && gameBattle.CountUnits(UnitType::Barbarian) < MAX_UNITS) {
                         SpawnPlayerUnit(UnitType::Barbarian, x, y, tx, ty, targetIdx);
                         mana -= 5;
                     }
 
                     // W 키 → 아처
-                    else if (GetAsyncKeyState('W') & 0x8000 && CountUnits(UnitType::Archer) < MAX_UNITS) {
+                    else if (GetAsyncKeyState('W') & 0x8000 && gameBattle.CountUnits(UnitType::Archer) < MAX_UNITS) {
                         if (!archerUnlocked) return 0;
                         SpawnPlayerUnit(UnitType::Archer, x, y, tx, ty, targetIdx);
                         mana -= 5;
                     }
                 }
 
-                if (GetAsyncKeyState('E') & 0x8000 && CountUnits(UnitType::Giant) < MAX_UNITS && mana - 10 >= 0) {
+                if (GetAsyncKeyState('E') & 0x8000 && gameBattle.CountUnits(UnitType::Giant) < MAX_UNITS && mana - 10 >= 0) {
                     if (!giantUnlocked) return 0;
                     SpawnPlayerUnit(UnitType::Giant, x, y, tx, ty, targetIdx);
                     mana -= 10;

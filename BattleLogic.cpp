@@ -1,4 +1,5 @@
 ﻿#include "BattleLogic.h"
+#include "RendererGlobals.h"
 #include <math.h>
 #include <algorithm>
 #include <tchar.h>
@@ -285,6 +286,7 @@ void UpdateUnit(Unit* u, tower* cannons, tower* mortars, InfernoTower* infernos,
 }
 
 void InfernoAttack(int stageIdx) {
+    auto& units = gameBattle.GetUnits();
     BOOL infernoTargetUsed[MAX_UNITS * 3] = { FALSE };
 
     for (int i = 0; i < infernoCount[stageIdx]; i++) {
@@ -301,7 +303,7 @@ void InfernoAttack(int stageIdx) {
 
         // 현재 타겟 유효성 검사
         if (t->isAttacking) {
-            Unit* target = FindUnit(t->targetId);
+            Unit* target = gameBattle.FindUnit(t->targetId);
 
             if (target && !target->IsDead()) {
                 float dx = (target->x + tileWidth / 2) - (t->x + 32);
@@ -330,7 +332,7 @@ void InfernoAttack(int stageIdx) {
             for (int j = 0; j < (int)units.size(); j++) {
                 if (infernoTargetUsed[j]) continue; // 다른 인페르노가 이미 타겟팅한 유닛이면 건너뜀
 
-                Unit* target = &units[j];
+                Unit* target = &units[j].unit;
 
                 if (target->IsDead()) continue;
 
@@ -347,7 +349,7 @@ void InfernoAttack(int stageIdx) {
             if (bestIdx != -1) {
                 infernoTargetUsed[bestIdx] = TRUE;
 
-                Unit* target = &units[bestIdx];
+                Unit* target = &units[bestIdx].unit;
 
                 t->isAttacking = TRUE;
                 t->targetId = target->GetId();
@@ -386,7 +388,7 @@ void InfernoAttack(int stageIdx) {
 
         // 데미지 처리
         if (t->isAttacking && valid) {
-            Unit* target = FindUnit(t->targetId);
+            Unit* target = gameBattle.FindUnit(t->targetId);
 
             if (target && !target->IsDead()) {
                 int damage = (int)(target->GetMaxHp() * t->damageRatio);
@@ -409,7 +411,7 @@ void UpdateInfernoEffects(int stageIdx) {
             continue;
         }
 
-        if (!FindUnit(infernoEffects[i].targetId)) {
+        if (!gameBattle.FindUnit(infernoEffects[i].targetId)) {
             infernoEffects[i].active = FALSE;
             continue;
         }
@@ -433,16 +435,26 @@ void UpdateTowerCooldowns(int stageIdx)
 // RemoveDeadEntities()에 해당 -----------------------------------------------------------------------
 void RemoveDeadUnits(void)
 {
-    units.erase(std::remove_if(units.begin(), units.end(),
-        [](const Unit& u) { return u.IsDead(); }), units.end());
+    gameBattle.RemoveDeadEntities();
 }
 
 void UpdateUnits(int stageIdx)
 {
-    // 이동 공격 처리 옮겨야함
-    for (Unit& u : units)
-        UpdateUnit(&u, cannons[stageIdx], mortars[stageIdx], infernos[stageIdx], infernoCount[stageIdx], mortarCount[stageIdx], cannonCount[stageIdx], u.IsRanged(), stageIdx);
-    // 이동 공격 처리 끝
+    for (BattleUnit& entry : gameBattle.GetUnits()) {
+        Unit& u = entry.unit;
+
+        UpdateUnit(
+            &u,
+            cannons[stageIdx],
+            mortars[stageIdx],
+            infernos[stageIdx],
+            infernoCount[stageIdx],
+            mortarCount[stageIdx],
+            cannonCount[stageIdx],
+            u.IsRanged(),
+            stageIdx
+        );
+    }
 }
 
 void UpdateArrows(int stageIdx)
@@ -540,7 +552,8 @@ void UpdateCannonAttacks(int stageIdx)
         float minDist = 999999.0f;
         Unit* best = nullptr;
 
-        for (Unit& u : units) {
+        for (BattleUnit& entry : gameBattle.GetUnits()) {
+            Unit& u = entry.unit;
             float dx = (u.x + tileWidth / 2) - (c->x + tileWidth);
             float dy = (u.y + tileHeight / 2) - (c->y + tileWidth);
             float dist = sqrtf(dx * dx + dy * dy);
@@ -595,7 +608,7 @@ void UpdateCannonShots(void)
         p->life--;
 
         // 타겟 유닛이 죽었거나 사라졌으면 탄 제거
-        Unit* target = FindUnit(p->targetId);
+        Unit* target = gameBattle.FindUnit(p->targetId);
         if (!target || target->IsDead()) {
             cannonShots[i] = cannonShots[--cannonShotCount];
             continue;
@@ -637,7 +650,8 @@ void UpdateMortarAttacks(int stageIdx)
         Unit* best = nullptr;
         float tx = 0, ty = 0;
 
-        for (Unit& u : units) {
+        for (BattleUnit& entry : gameBattle.GetUnits()) {
+            Unit& u = entry.unit;
             if (u.IsDead()) continue;
 
             float dx = (u.x + tileWidth / 2) - (m->x + tileWidth / 2);
@@ -693,7 +707,8 @@ void UpdateMortarShots(void)
             int mortardamage = 80;
 
             // 범위 안의 유닛 전체 검사
-            for (Unit& u : units) {
+            for (BattleUnit& entry : gameBattle.GetUnits()) {
+                Unit& u = entry.unit;
                 float ux = u.x + tileWidth / 2;
                 float uy = u.y + tileHeight / 2;
                 float d = sqrtf((ux - tx) * (ux - tx) + (uy - ty) * (uy - ty));

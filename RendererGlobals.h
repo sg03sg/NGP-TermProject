@@ -3,9 +3,12 @@
 
 #include "GameTypes.h"
 #include "Unit.h"
+#include "BattleInstance.h"
 
 // coc.c 가 소유한 전역 상태를 클라이언트 모듈들(Renderer 등)이 참조하기 위한 선언이다.
 // 정의는 coc.c 에 있으며, coc.c 도 이 헤더를 포함해 "선언과 정의의 타입 불일치를 컴파일러가 잡게 하기 위함".
+
+extern BattleInstance gameBattle;
 
 typedef enum {
     STATE_LOADING,

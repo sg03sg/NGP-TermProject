@@ -359,7 +359,8 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
         DeleteDC(memDC);
     }
 
-    for (const Unit& u : units) {
+    for (const BattleUnit& entry : gameBattle.GetUnits()) {
+        const Unit& u = entry.unit;
         if (u.GetType() != UnitType::Barbarian) continue;
         int x = u.x, y = u.y, frame = u.frameIndex;
         int tidx = u.targetIndex;
@@ -380,7 +381,8 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
     }
 
 
-    for (const Unit& u : units) {
+    for (const BattleUnit& entry : gameBattle.GetUnits()) {
+        const Unit& u = entry.unit;
         if (u.GetType() != UnitType::Archer) continue;
         int x = u.x, y = u.y, frame = u.frameIndex;
         int tidx = u.targetIndex;
@@ -409,7 +411,8 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
 
     }
 
-    for (const Unit& u : units) {
+    for (const BattleUnit& entry : gameBattle.GetUnits()) {
+        const Unit& u = entry.unit;
         if (u.GetType() != UnitType::Giant) continue;
         int x = u.x, y = u.y, frame = u.frameIndex;
         int tidx = u.targetIndex;
@@ -597,7 +600,7 @@ static void DrawInfernoEffects(HDC mDC, int stageIdx) {
         float sx = infernoEffects[i].x;
         float sy = infernoEffects[i].y;
 
-        Unit* target = FindUnit(infernoEffects[i].targetId);
+        Unit* target = gameBattle.FindUnit(infernoEffects[i].targetId);
         if (!target) continue;
 
         float tx = target->x + tileWidth / 2;
