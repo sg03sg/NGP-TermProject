@@ -129,10 +129,19 @@
   <ItemGroup>
     <ClCompile Include="clnt_othercom.cpp" />
     <ClCompile Include="NetworkClient.cpp" />
+    <ClCompile Include="EncodingUtil.cpp" />
+    <ClCompile Include="PacketAssembler.cpp" />
+    <ClCompile Include="..\PacketCodec.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h" />
     <ClInclude Include="NetworkClient.h" />
+    <ClInclude Include="EncodingUtil.h" />
+    <ClInclude Include="PacketAssembler.h" />
+    <ClInclude Include="LocalPlayer.h" />
+    <ClInclude Include="..\PacketCodec.h" />
+    <ClInclude Include="..\Message.h" />
+    <ClInclude Include="..\Protocol.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
