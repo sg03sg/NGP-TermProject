@@ -9,6 +9,7 @@
 #include "SessionManager.h"
 #include "ThreadSafeQueue.h"
 #include "LobbyBroadcaster.h"
+#include "PartyManager.h"
 
 class GameServer {
 private:
@@ -19,6 +20,7 @@ private:
     std::thread workerThread_;
 
     SessionManager session_manager_;
+    PartyManager partyManager_;
     LobbyBroadcaster lobbyBroadcaster_;
 
     void AcceptLoop();

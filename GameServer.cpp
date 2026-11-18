@@ -99,10 +99,8 @@ void GameServer::WorkerLoop() {
 
         // PartyManager 연결 후 로비 세션 목록과 실제 현황으로 교체
 
-        const uint64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count();
-        lobbyBroadcaster_.Tick(nowMs, MakeDefaultLobbyMaps(),
-            session_manager_.GetSessionIds(), session_manager_);
+        const uint64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        lobbyBroadcaster_.Tick(nowMs, partyManager_.BuildLobbyMaps(), session_manager_.GetSessionIds(), session_manager_);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
