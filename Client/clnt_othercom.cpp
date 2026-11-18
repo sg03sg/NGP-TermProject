@@ -5,6 +5,8 @@
 #include "LocalPlayer.h"
 #include "../PacketCodec.h"
 #include "../PacketBuffer.h"
+#include "../GameFramework.h"
+#include "GameWindow.h"
 
 #include <conio.h>
 #include <string>
@@ -31,7 +33,7 @@ static bool SendMarker(NetworkClient& client, LocalPlayer& player, uint32_t x, u
 	return true;
 }
 
-// 패킷 헤더의 messageType (5~6번째 바이트, 빅엔디안)
+// 패킷 헤더의 messageType
 static uint16_t MessageTypeOf(const PacketCodec::Packet& packet)
 {
 	if (packet.size() < PACKET_HEADER_SIZE) return 0;
@@ -94,7 +96,7 @@ static void HandleInputLine(const char* line, NetworkClient& client, LocalPlayer
 		printf("[오류] 좌표 전송 실패\n");
 }
 
-// 수신 큐의 바이트를 PacketBuffer에 넣고 완성된 패킷 처리 (잘못된 길이를 받으면 false)
+// 수신 큐의 바이트를 PacketBuffer에 넣고 완성된 패킷 처리
 static bool ProcessReceived(NetworkClient& client, PacketBuffer& packetBuffer, LocalPlayer& player)
 {
 	std::vector<char> data;
@@ -130,6 +132,69 @@ static bool ReadNickname(std::string& nickname)
 		printf("닉네임이 비어 있습니다.\n");
 	}
 }
+
+// 게임 루프에서 로딩 갱신, 네트워크 수신, 콘솔 좌표 입력 처리
+class ClientMode : public GameMode {
+public:
+	ClientMode(NetworkClient& client, LocalPlayer& player, PacketBuffer& packetBuffer)
+		: m_client(client), m_player(player), m_packetBuffer(packetBuffer) {}
+
+	void OnTimer(int timerId) override { GameWindow_OnTimer(timerId); }
+
+	void Update(double frameTime) override
+	{
+		if (!ProcessReceived(m_client, m_packetBuffer, m_player)) {
+			printf("[오류] 잘못된 길이의 패킷을 받아 연결을 끊습니다.\n");
+			GameFramework::Quit();
+			return;
+		}
+		if (!m_client.IsConnected()) {
+			GameFramework::Quit();
+			return;
+		}
+
+		ReadConsoleKeys();
+	}
+
+private:
+	// 콘솔 창에서 한 줄씩 입력받아 "x y"는 좌표 전송, "q"는 종료
+	void ReadConsoleKeys()
+	{
+		while (_kbhit()) {
+			int c = _getch();
+			if (c == 0 || c == 0xE0) {
+				_getch();
+				continue;
+			}
+			if (c == '\r') {
+				printf("\n");
+				m_line[m_lineLen] = '\0';
+				if (strcmp(m_line, "q") == 0) {
+					GameFramework::Quit();
+					return;
+				}
+				if (m_lineLen > 0) HandleInputLine(m_line, m_client, m_player);
+				m_lineLen = 0;
+			}
+			else if (c == '\b') {
+				if (m_lineLen > 0) {
+					m_lineLen--;
+					printf("\b \b");
+				}
+			}
+			else if (m_lineLen < (int)sizeof(m_line) - 1) {
+				m_line[m_lineLen++] = (char)c;
+				putchar(c);
+			}
+		}
+	}
+
+	NetworkClient& m_client;
+	LocalPlayer& m_player;
+	PacketBuffer& m_packetBuffer;
+	char m_line[64] = { 0 };
+	int m_lineLen = 0;
+};
 
 int main(int argc, char* argv[])
 {
@@ -181,51 +246,22 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 	printf("[송신] HELLO 닉네임=%s (UTF-8 %zu바이트) 요청번호 %u\n", player.nickname.c_str(), hello.name.size(), helloId);
-	printf("WELCOME을 기다리는 중... (q 입력 시 종료)\n");
+	printf("WELCOME을 기다리는 중... (창을 닫거나 콘솔에서 q 입력 시 종료)\n");
 
-	// 2. 수신 패킷 처리 및 좌표 입력 루프
-	PacketBuffer packetBuffer;
-	char line[64];
-	int lineLen = 0;
-	bool running = true;
-
-	while (running) {
-		if (!ProcessReceived(client, packetBuffer, player)) {
-			printf("[오류] 잘못된 길이의 패킷을 받아 연결을 끊습니다.\n");
-			break;
-		}
-		if (!client.IsConnected()) break;
-
-		while (_kbhit()) {
-			int c = _getch();
-			if (c == 0 || c == 0xE0) {
-				_getch();
-				continue;
-			}
-			if (c == '\r') {
-				printf("\n");
-				line[lineLen] = '\0';
-				if (strcmp(line, "q") == 0) {
-					running = false;
-					break;
-				}
-				if (lineLen > 0) HandleInputLine(line, client, player);
-				lineLen = 0;
-			}
-			else if (c == '\b') {
-				if (lineLen > 0) {
-					lineLen--;
-					printf("\b \b");
-				}
-			}
-			else if (lineLen < (int)sizeof(line) - 1) {
-				line[lineLen++] = (char)c;
-				putchar(c);
-			}
-		}
-
-		Sleep(16);
+	// 2. 게임 창 실행
+	HWND hWnd = GameWindow_Create(GetModuleHandle(NULL));
+	if (hWnd == NULL) {
+		printf("[오류] 게임 창을 만들지 못했습니다.\n");
+		client.Disconnect();
+		NetworkClient::Cleanup();
+		return 1;
 	}
+
+	PacketBuffer packetBuffer;
+	ClientMode mode(client, player, packetBuffer);
+	GameFramework::Run(hWnd, &mode);
+
+	if (IsWindow(hWnd)) DestroyWindow(hWnd);
 
 	if (!client.IsConnected()) {
 		ProcessReceived(client, packetBuffer, player);     // 끊기기 직전에 도착한 패킷 처리
