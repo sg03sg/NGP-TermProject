@@ -1,10 +1,10 @@
 ﻿#define _CRT_SECURE_NO_WARNINGS
 #include "common.h"
 #include "NetworkClient.h"
-#include "PacketAssembler.h"
 #include "EncodingUtil.h"
 #include "LocalPlayer.h"
 #include "../PacketCodec.h"
+#include "../PacketBuffer.h"
 
 #include <conio.h>
 #include <string>
@@ -31,9 +31,16 @@ static bool SendMarker(NetworkClient& client, LocalPlayer& player, uint32_t x, u
 	return true;
 }
 
+// 패킷 헤더의 messageType (5~6번째 바이트, 빅엔디안)
+static uint16_t MessageTypeOf(const PacketCodec::Packet& packet)
+{
+	if (packet.size() < PACKET_HEADER_SIZE) return 0;
+	return (uint16_t)((packet[4] << 8) | packet[5]);
+}
+
 static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 {
-	uint16_t type = PacketAssembler::MessageTypeOf(packet);
+	uint16_t type = MessageTypeOf(packet);
 
 	switch (static_cast<MessageType>(type)) {
 	case MessageType::WELCOME: {
@@ -87,16 +94,22 @@ static void HandleInputLine(const char* line, NetworkClient& client, LocalPlayer
 		printf("[오류] 좌표 전송 실패\n");
 }
 
-// 수신 큐의 바이트를 조립기에 넣고 완성된 패킷 처리
-static void ProcessReceived(NetworkClient& client, PacketAssembler& assembler, LocalPlayer& player)
+// 수신 큐의 바이트를 PacketBuffer에 넣고 완성된 패킷 처리 (잘못된 길이를 받으면 false)
+static bool ProcessReceived(NetworkClient& client, PacketBuffer& packetBuffer, LocalPlayer& player)
 {
 	std::vector<char> data;
 	while (client.PollReceived(data))
-		assembler.Append(data.data(), data.size());
+		packetBuffer.Append(reinterpret_cast<const uint8_t*>(data.data()), data.size());
 
 	PacketCodec::Packet packet;
-	while (assembler.Pop(packet))
-		HandlePacket(packet, player);
+	for (;;) {
+		ExtractResult result = packetBuffer.TryExtractPacket(packet);
+		if (result == ExtractResult::Ready) {
+			HandlePacket(packet, player);
+			continue;
+		}
+		return result != ExtractResult::InvalidLength;
+	}
 }
 
 static bool ReadNickname(std::string& nickname)
@@ -171,15 +184,13 @@ int main(int argc, char* argv[])
 	printf("WELCOME을 기다리는 중... (q 입력 시 종료)\n");
 
 	// 2. 수신 패킷 처리 및 좌표 입력 루프
-	PacketAssembler assembler;
+	PacketBuffer packetBuffer;
 	char line[64];
 	int lineLen = 0;
 	bool running = true;
 
 	while (running) {
-		ProcessReceived(client, assembler, player);
-
-		if (assembler.HasError()) {
+		if (!ProcessReceived(client, packetBuffer, player)) {
 			printf("[오류] 잘못된 길이의 패킷을 받아 연결을 끊습니다.\n");
 			break;
 		}
@@ -217,7 +228,7 @@ int main(int argc, char* argv[])
 	}
 
 	if (!client.IsConnected()) {
-		ProcessReceived(client, assembler, player);     // 끊기기 직전에 도착한 패킷 처리
+		ProcessReceived(client, packetBuffer, player);     // 끊기기 직전에 도착한 패킷 처리
 
 		if (client.LastError() == 0)
 			printf("서버가 연결을 종료했습니다.\n");
