@@ -4,7 +4,12 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
-GameServer::GameServer() : listenSocket_(INVALID_SOCKET), running_(false) {
+namespace {
+    // 워커 스레드가 한 틱에 처리하는 최대 요청 수
+    constexpr int kMaxCommandsPerTick = 256;
+}
+
+GameServer::GameServer() : listenSocket_(INVALID_SOCKET), running_(false), dispatcher_(*this) {
 
 }
 
@@ -92,9 +97,17 @@ void GameServer::BroadcastPacket(const char* data, int length) {
     session_manager_.Broadcast(data, length);
 }
 
+bool GameServer::PushRequest(Command command) {
+    return requestQueue_.Push(std::move(command));
+}
+
 void GameServer::WorkerLoop() {
     while (running_) {
-        // 추후 requestQueue_ 처리 로직이 들어갈 자리
+        // 요청 큐 처리, 한 틱에 처리하는 개수를 제한해 세션 정리와 로비 방송이 밀리지 않게 함
+        Command cmd;
+        for (int i = 0; i < kMaxCommandsPerTick && requestQueue_.TryPop(cmd); ++i) {
+            dispatcher_.Dispatch(cmd);
+        }
         session_manager_.ReapClosed();   // 끊긴 세션 정리
 
         // PartyManager 연결 후 로비 세션 목록과 실제 현황으로 교체
@@ -120,6 +133,7 @@ void GameServer::Stop() {
 
     // 안전하게 모든 세션 정리
     session_manager_.Clear();
+    requestQueue_.Close();   // 세션이 모두 끝난 뒤 큐 닫기
 
     WSACleanup();
     std::cout << "[GameServer] 서버가 성공적으로 종료되었습니다." << std::endl;

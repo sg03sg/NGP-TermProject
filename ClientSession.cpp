@@ -1,5 +1,6 @@
 #include "ClientSession.h"
 #include "GameServer.h"
+#include "PacketBuffer.h"
 #include <iostream>
 #include <algorithm>
 #include <exception>
@@ -39,6 +40,7 @@ bool ClientSession::StartReceive() {
 
 void ClientSession::RecvThread() {
     char buffer[512];
+    PacketBuffer packetBuffer;
     while (!closing_) {
         int recvBytes = recv(socket_, buffer, sizeof(buffer), 0);
 
@@ -53,7 +55,22 @@ void ClientSession::RecvThread() {
             break;
         }
 
-        // 수신 데이터 처리 (PacketBuffer 및 CommandDispatcher 연동)
+        // 받은 바이트를 이어 붙여 완성된 패킷을 요청 큐로 전달
+        packetBuffer.Append(reinterpret_cast<const uint8_t*>(buffer), static_cast<size_t>(recvBytes));
+
+        PacketBuffer::Packet packet;
+        ExtractResult result;
+        while ((result = packetBuffer.TryExtractPacket(packet)) == ExtractResult::Ready) {
+            Command cmd;
+            cmd.type = Command::Type::Packet;
+            cmd.sessionId = sessionId_;
+            cmd.packet = std::move(packet);
+            server_->PushRequest(std::move(cmd));
+        }
+        if (result == ExtractResult::InvalidLength) {
+            std::cout << "[ClientSession] 세션 (" << sessionId_ << ") 잘못된 패킷 길이, 연결 종료." << std::endl;
+            break;
+        }
     }
 
     RequestClose();   // 송신 스레드도 깨움
@@ -114,7 +131,10 @@ void ClientSession::RequestClose() {
 
 void ClientSession::NotifyClosed() {
     if (!closeNotified_.exchange(true)) {
-        // TODO: requestQueue_ 가 생기면 여기서 "연결 종료 이벤트(sessionId_)"를 Push
+        Command cmd;
+        cmd.type = Command::Type::Disconnected;
+        cmd.sessionId = sessionId_;
+        server_->PushRequest(std::move(cmd));
         // 현재는 SessionManager::ReapClosed() 가 IsConnected()==false 로 감지해 정리한다.
     }
 }
