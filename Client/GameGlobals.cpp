@@ -3,6 +3,8 @@
 // Renderer가 읽는 전역 상태의 정의
 // 솔로 게임의 coc.cpp 전역 중 드로잉에 필요한 것만 복사
 
+BattleInstance gameBattle;
+
 GameState gameState = STATE_LOADING;
 
 BOOL isLoading = TRUE;
