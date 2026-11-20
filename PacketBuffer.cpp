@@ -33,7 +33,7 @@ ExtractResult PacketBuffer::TryExtractPacket(Packet& out)
     if (totalLength < PACKET_HEADER_SIZE || totalLength > maxPacketSize) {
         return ExtractResult::InvalidLength;
     }
- 
+
     if (available < totalLength) {
         return ExtractResult::More;
     }

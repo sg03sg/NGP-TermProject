@@ -1,4 +1,4 @@
-ï»¿#pragma once
+#pragma once
 
 #include <cstdint>
 #include <vector>
@@ -13,84 +13,84 @@ public:
     using Packet = vector<uint8_t>;
 
     // ==============================================================================================
-    // ì¸ì½”ë“œ
+    // ÀÎÄÚµå
     // ==============================================================================================
 
-    // ì ‘ì† ë° ë§µ ì°¸ê°€
+    // Á¢¼Ó ¹× ¸Ê Âü°¡
     static Packet Encode(const Hello& message, uint32_t requestId = 0);
     static Packet Encode(const Welcome& message, uint32_t requestId = 0);
     static Packet Encode(const JoinMap& message, uint32_t requestId = 0);
 
-    // íŒŒí‹°
+    // ÆÄÆ¼
     static Packet Encode(const PartyState& message, uint32_t requestId = 0);
     static Packet Encode(const StartGame& message, uint32_t requestId = 0);
     static Packet Encode(const LeaveParty& message, uint32_t requestId = 0);
     static Packet Encode(const LeaveApproved& message, uint32_t requestId = 0);
 
-    // ì±„íŒ…
+    // Ã¤ÆÃ
     static Packet Encode(const ChatSend& message, uint32_t requestId = 0);
     static Packet Encode(const ChatMessage& message, uint32_t requestId = 0);
 
-    // ì „íˆ¬ ì´ˆê¸°í™” ë° ì†Œí™˜
+    // ÀüÅõ ÃÊ±âÈ­ ¹× ¼ÒÈ¯
     static Packet Encode(const BattleInit& message, uint32_t requestId = 0);
     static Packet Encode(const SpawnRequest& message, uint32_t requestId = 0);
     static Packet Encode(const UnitCreated& message, uint32_t requestId = 0);
     static Packet Encode(const ManaState& message, uint32_t requestId = 0);
     static Packet Encode(const RequestRejected& message, uint32_t requestId = 0);
 
-    // ì „íˆ¬ ì§„í–‰ ë° ê²°ê³¼
+    // ÀüÅõ ÁøÇà ¹× °á°ú
     static Packet Encode(const BattleState& message, uint32_t requestId = 0);
     static Packet Encode(const BattleProgress& message, uint32_t requestId = 0);
     static Packet Encode(const BattleResult& message, uint32_t requestId = 0);
     static Packet Encode(const ReturnLobby& message, uint32_t requestId = 0);
 
-    // ì¤‘ë‹¨ íˆ¬í‘œ
+    // Áß´Ü ÅõÇ¥
     static Packet Encode(const AbortVoteStart& message, uint32_t requestId = 0);
     static Packet Encode(const AbortVoteCast& message, uint32_t requestId = 0);
     static Packet Encode(const AbortVoteResult& message, uint32_t requestId = 0);
 
-    // ì¢Œí‘œ í…ŒìŠ¤íŠ¸
+    // ÁÂÇ¥ Å×½ºÆ®
     static Packet Encode(const MarkerRequest& message, uint32_t requestId = 0);
     static Packet Encode(const MarkerPlaced& message, uint32_t requestId = 0);
 
     // ==============================================================================================
-    // ë””ì½”ë“œ 
+    // µğÄÚµå 
     // ==============================================================================================
-    
-    // ì ‘ì† ë° ë§µ ì°¸ê°€
+
+    // Á¢¼Ó ¹× ¸Ê Âü°¡
     static bool Decode(const Packet& packet, Hello& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, Welcome& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, JoinMap& out, PacketHeader* header = nullptr);
 
-    // íŒŒí‹°
+    // ÆÄÆ¼
     static bool Decode(const Packet& packet, PartyState& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, StartGame& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, LeaveParty& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, LeaveApproved& out, PacketHeader* header = nullptr);
 
-    // ì±„íŒ…
+    // Ã¤ÆÃ
     static bool Decode(const Packet& packet, ChatSend& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, ChatMessage& out, PacketHeader* header = nullptr);
 
-    // ì „íˆ¬ ì´ˆê¸°í™” ë° ì†Œí™˜
+    // ÀüÅõ ÃÊ±âÈ­ ¹× ¼ÒÈ¯
     static bool Decode(const Packet& packet, BattleInit& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, SpawnRequest& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, UnitCreated& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, ManaState& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, RequestRejected& out, PacketHeader* header = nullptr);
 
-    // ì „íˆ¬ ì§„í–‰ ë° ê²°ê³¼
+    // ÀüÅõ ÁøÇà ¹× °á°ú
     static bool Decode(const Packet& packet, BattleState& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, BattleProgress& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, BattleResult& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, ReturnLobby& out, PacketHeader* header = nullptr);
 
-    // ì¤‘ë‹¨ íˆ¬í‘œ
+    // Áß´Ü ÅõÇ¥
     static bool Decode(const Packet& packet, AbortVoteStart& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, AbortVoteCast& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, AbortVoteResult& out, PacketHeader* header = nullptr);
 
-    // ì¢Œí‘œ í…ŒìŠ¤íŠ¸
+    // ÁÂÇ¥ Å×½ºÆ®
     static bool Decode(const Packet& packet, MarkerRequest& out, PacketHeader* header = nullptr);
     static bool Decode(const Packet& packet, MarkerPlaced& out, PacketHeader* header = nullptr);
 };

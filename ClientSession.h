@@ -5,6 +5,7 @@
 #include <atomic>
 #include <vector>
 #include "ThreadSafeQueue.h"
+#include "PacketBuffer.h"
 
 static constexpr size_t kMaxPendingPackets = 512;
 
@@ -15,6 +16,7 @@ private:
     GameServer* server_;
     const int sessionId_;
     SOCKET socket_;
+    PacketBuffer recvBuffer_;                       // 수신 누적 버퍼 (RecvThread만 접근)
     ThreadSafeQueue<std::vector<char>> sendQueue_;
     std::thread recvThread_;
     std::thread sendThread_;

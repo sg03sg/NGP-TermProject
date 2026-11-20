@@ -20,6 +20,9 @@ public:
         const std::vector<int>& lobbySessionIds,
         SessionManager& sessions);
 
-    // 접속·참가·퇴장·전투 종료처럼 현황이 바뀌었을 때 호출하면 다음 Tick에서 즉시 방송한다.
+    
+    bool ShouldSend(uint64_t nowMs) const { return sendNext_ || nowMs - lastSentMs_ >= intervalMs_; }
+
+    // 접속·참가·퇴장·전투 종료처럼 현황이 바뀌었을 때 호출하면 다음 Tick에서 즉시 방송
     void Invalidate() { sendNext_ = true; }
 };

@@ -1,53 +1,53 @@
-ï»¿#pragma once
+#pragma once
 
 #include <cstdint>
 
 constexpr std::uint32_t PACKET_HEADER_SIZE = 10;
 
 struct PacketHeader {
-	// í—¤ë”, ë³¸ë¬¸ í¬í•¨ ì „ì²´ ê¸¸ì´
+	// Çì´õ, º»¹® Æ÷ÇÔ ÀüÃ¼ ±æÀÌ
 	std::uint32_t totalLength = PACKET_HEADER_SIZE;
-	// ë©”ì„¸ì§€ ì¢…ë¥˜ 
+	// ¸Þ¼¼Áö Á¾·ù 
 	std::uint16_t messageType = 0;
-	// ìš”ì²­ ID
+	// ¿äÃ» ID
 	std::uint32_t requestId = 0;
 };
 
 enum class MessageType : std::uint16_t {
-	// ì ‘ì† ë§µ ì°¸ê°€ 
+	// Á¢¼Ó ¸Ê Âü°¡ 
 	WELCOME = 1,
 	JOIN_MAP = 2,
 	HELLO = 18,
 
-	// íŒŒí‹° ê´€ë ¨ ë©”ì„¸ì§€ 
+	// ÆÄÆ¼ °ü·Ã ¸Þ¼¼Áö 
 	PARTY_STATE = 3,
 	START_GAME = 4,
 	LEAVE_PARTY = 16,
 	LEAVE_APPROVED = 17,
 
-	// ì±„íŒ… ê´€ë ¨ ë©”ì„¸ì§€
+	// Ã¤ÆÃ °ü·Ã ¸Þ¼¼Áö
 	CHAT_SEND = 14,
 	CHAT_MESSAGE = 15,
 
 
-	// ì „íˆ¬ ì´ˆê¸°í™”, ì†Œí™˜ ê´€ë ¨ ë©”ì„¸ì§€ 
+	// ÀüÅõ ÃÊ±âÈ­, ¼ÒÈ¯ °ü·Ã ¸Þ¼¼Áö 
 	BATTLE_INIT = 5,
 	SPAWN_REQUEST = 6,
 	UNIT_CREATED = 7,
 	MANA_STATE = 8,
 	REQUEST_REJECT = 9,
 
-	// ì „íˆ¬ ë™ê¸°í™”, ì¢…ë£Œ ê´€ë ¨ ë©”ì„¸ì§€
+	// ÀüÅõ µ¿±âÈ­, Á¾·á °ü·Ã ¸Þ¼¼Áö
 	BATTLE_STATE = 10,
 	BATTLE_PROGRESS = 11,
 	BATTLE_RESULT = 12,
 	RETURN_LOBBY = 13,
 
-	// ì¤‘ë‹¨ íˆ¬í‘œ ê´€ë ¨ ë©”ì„¸ì§€ 
+	// Áß´Ü ÅõÇ¥ °ü·Ã ¸Þ¼¼Áö 
 	ABORT_VOTE_START = 19,
 	ABORT_VOTE_CAST = 20,
 	ABORT_VOTE_RESULT = 21,
-	// ì  ì°ê¸° ê²€ì¦ í™•ì¸ìš© 
+	// Á¡ Âï±â °ËÁõ È®ÀÎ¿ë 
 	MARKER_REQUEST = 22,
 	MARKER_PLACED = 23
 };

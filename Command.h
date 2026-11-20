@@ -1,15 +1,15 @@
-ï»¿#pragma once
+#pragma once
 #include <cstdint>
 #include <vector>
 
-// ì„¸ì…˜ ìŠ¤ë ˆë“œì—ì„œ ì›Œì»¤ ìŠ¤ë ˆë“œë¡œ ë„˜ê¸°ëŠ” ìš”ì²­ í•˜ë‚˜
+// ¼¼¼Ç ½º·¹µå¿¡¼­ ¿öÄ¿ ½º·¹µå·Î ³Ñ±â´Â ¿äÃ» ÇÏ³ª
 struct Command {
     enum class Type : uint8_t {
-        Packet,         // ì™„ì„±ëœ íŒ¨í‚· ìˆ˜ì‹ 
-        Disconnected    // ì—°ê²° ì¢…ë£Œ
+        Packet,         // ¿Ï¼ºµÈ ÆĞÅ¶ ¼ö½Å
+        Disconnected    // ¿¬°á Á¾·á
     };
 
     Type                 type = Type::Packet;
     int                  sessionId = 0;
-    std::vector<uint8_t> packet;    // í—¤ë”ë¥¼ í¬í•¨í•œ íŒ¨í‚· ì „ì²´, Packetì¼ ë•Œë§Œ ì‚¬ìš©
+    std::vector<uint8_t> packet;    // Çì´õ¸¦ Æ÷ÇÔÇÑ ÆĞÅ¶ ÀüÃ¼, PacketÀÏ ¶§¸¸ »ç¿ë
 };
