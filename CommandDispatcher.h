@@ -1,33 +1,53 @@
-ï»¿#pragma once
+#pragma once
+#include <map>
+#include <string>
+#include <vector>
 #include "Command.h"
+#include "PacketCodec.h"
+#include "PartyCommandHandler.h"
 
 class GameServer;
 
-// ìš”ì²­ íì—ì„œ êº¼ë‚¸ ìš”ì²­ì„ messageTypeë³„ ì²˜ë¦¬ í•¨ìˆ˜ë¡œ ë¶„ë°°
-// ì›Œì»¤ ìŠ¤ë ˆë“œì—ì„œë§Œ í˜¸ì¶œ
+// ¿äÃ» Å¥¿¡¼­ ²¨³½ ¿äÃ»À» messageTypeº° Ã³¸® ÇÔ¼ö·Î ºĞ¹è
+// ¿öÄ¿ ½º·¹µå¿¡¼­¸¸ È£Ãâ
 class CommandDispatcher {
 private:
     GameServer& server_;
 
+    // Á¢¼Ó »óÅÂ: sessionId <-> playerId. ¿öÄ¿ ½º·¹µå¸¸ Á¢±ÙÇÏ¹Ç·Î ¶ôÀÌ ¾ø´Ù.
+    std::map<int, PlayerId>         sessionToPlayer_;
+    std::map<PlayerId, int>         playerToSession_;
+    std::map<PlayerId, std::string> players_;   // playerId -> ´Ğ³×ÀÓ
+    PlayerId                        nextPlayerId_ = 1;
+
+    PartyCommandHandler             partyHandler_;   // ÀåÇö¿ì: ·Îºñ¡¤ÆÄÆ¼
+
+    // Àü¼Û º¸Á¶ (ÀÎÄÚµù ½ÇÆĞ·Î ºó ÆĞÅ¶ÀÌ¸é º¸³»Áö ¾Ê´Â´Ù)
+    void SendToSession(int sessionId, const PacketCodec::Packet& packet);
+    void SendToSessions(const std::vector<int>& sessionIds, const PacketCodec::Packet& packet);
+    void SendToPlayer(PlayerId pid, const PacketCodec::Packet& packet);
+    void SendToPlayers(const std::vector<PlayerId>& pids, const PacketCodec::Packet& packet);
+    PlayerId PlayerOf(int sessionId) const;   // HELLO ÀüÀÌ¸é kInvalidPlayerId
+
     void DispatchPacket(const Command& cmd);
 
-    // ì ‘ì†
+    // Á¢¼Ó
     void HandleHello(const Command& cmd);
     void HandleDisconnected(int sessionId);
 
-    // ë¡œë¹„ì™€ íŒŒí‹°
+    // ·Îºñ¿Í ÆÄÆ¼
     void HandleJoinMap(const Command& cmd);
     void HandleStartGame(const Command& cmd);
     void HandleLeaveParty(const Command& cmd);
 
-    // ì±„íŒ…
+    // Ã¤ÆÃ
     void HandleChatSend(const Command& cmd);
 
-    // ì „íˆ¬
+    // ÀüÅõ
     void HandleSpawn(const Command& cmd);
     void HandleAbortVoteCast(const Command& cmd);
 
-    // ì¢Œí‘œ í…ŒìŠ¤íŠ¸
+    // ÁÂÇ¥ Å×½ºÆ®
     void HandleMarkerRequest(const Command& cmd);
 
 public:

@@ -7,6 +7,9 @@
 namespace {
     // 워커 스레드가 한 틱에 처리하는 최대 요청 수
     constexpr int kMaxCommandsPerTick = 256;
+
+    // 클라이언트가 LOBBY_STATE(24)를 처리하게 되면 true로 전환.
+    constexpr bool kEnableLobbyBroadcast = false;
 }
 
 GameServer::GameServer() : listenSocket_(INVALID_SOCKET), running_(false), dispatcher_(*this) {
@@ -40,7 +43,7 @@ bool GameServer::Start(int port) {
     serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
     serverAddr.sin_port = htons(port);
 
-    if (bind(sock, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+    if (::bind(sock, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         std::cerr << "[GameServer] bind 실패: " << WSAGetLastError() << std::endl;
         closesocket(sock);
         WSACleanup();
@@ -56,6 +59,7 @@ bool GameServer::Start(int port) {
 
     listenSocket_ = sock;
     running_ = true;
+    std::cout << "[GameServer] 로비 방송: " << (kEnableLobbyBroadcast ? "켜짐" : "꺼짐") << std::endl;
     acceptThread_ = std::thread(&GameServer::AcceptLoop, this);
     workerThread_ = std::thread(&GameServer::WorkerLoop, this);
 
@@ -73,7 +77,7 @@ void GameServer::AcceptLoop() {
         if (clientSock == INVALID_SOCKET) {
             if (!running_) break;
             std::cerr << "[GameServer] accept 에러: " << WSAGetLastError() << std::endl;
-            // [수정] 에러가 반복돼도 CPU를 태우지 않도록 대기
+            // 에러가 반복돼도 CPU를 태우지 않도록 대기
             if (++consecutiveErrors >= 5) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
@@ -113,7 +117,9 @@ void GameServer::WorkerLoop() {
         // PartyManager 연결 후 로비 세션 목록과 실제 현황으로 교체
 
         const uint64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-        lobbyBroadcaster_.Tick(nowMs, partyManager_.BuildLobbyMaps(), session_manager_.GetSessionIds(), session_manager_);
+        if (kEnableLobbyBroadcast && lobbyBroadcaster_.ShouldSend(nowMs)) {
+            lobbyBroadcaster_.Tick(nowMs, partyManager_.BuildLobbyMaps(), session_manager_.GetSessionIds(), session_manager_);
+        }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }

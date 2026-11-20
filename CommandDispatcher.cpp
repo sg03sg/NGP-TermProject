@@ -1,25 +1,66 @@
-ï»¿#include "CommandDispatcher.h"
+#include "CommandDispatcher.h"
 #include "GameServer.h"
 #include "Protocol.h"
 #include <iostream>
 
 namespace {
-    // íŒ¨í‚· í—¤ë”ì˜ messageType
+    // ÆĞÅ¶ Çì´õÀÇ messageType
     uint16_t MessageTypeOf(const std::vector<uint8_t>& packet)
     {
         if (packet.size() < PACKET_HEADER_SIZE) return 0;
         return static_cast<uint16_t>((packet[4] << 8) | packet[5]);
     }
 
-    // ì²˜ë¦¬ í•¨ìˆ˜ë¥¼ êµ¬í˜„í•˜ê¸° ì „ê¹Œì§€ ìˆ˜ì‹  ì‚¬ì‹¤ë§Œ ë¡œê·¸ë¡œ ë‚¨ê¹€
+    // Ã³¸® ÇÔ¼ö¸¦ ±¸ÇöÇÏ±â Àü±îÁö ¼ö½Å »ç½Ç¸¸ ·Î±×·Î ³²±è
     void LogReceived(const Command& cmd, const char* name)
     {
-        std::cout << "[CommandDispatcher] ì„¸ì…˜ " << cmd.sessionId << ": " << name
-                  << " ìˆ˜ì‹  " << cmd.packet.size() << "ë°”ì´íŠ¸, ì²˜ë¦¬ í•¨ìˆ˜ ë¯¸êµ¬í˜„" << std::endl;
+        std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": " << name
+            << " ¼ö½Å " << cmd.packet.size() << "¹ÙÀÌÆ®, Ã³¸® ÇÔ¼ö ¹Ì±¸Çö" << std::endl;
     }
 }
 
-CommandDispatcher::CommandDispatcher(GameServer& server) : server_(server) {
+CommandDispatcher::CommandDispatcher(GameServer& server)
+    : server_(server),
+    partyHandler_(PartyCommandHandler::Context{
+        server.GetPartyManager(),
+        [this](PlayerId pid, const PacketCodec::Packet& p) { SendToPlayer(pid, p); },
+        [this](const std::vector<PlayerId>& pids, const PacketCodec::Packet& p) { SendToPlayers(pids, p); },
+        [this](PlayerId pid) { auto it = players_.find(pid); return it != players_.end() ? it->second : std::string(); },
+        [&server]() { server.GetLobbyBroadcaster().Invalidate(); } })
+{
+}
+
+void CommandDispatcher::SendToSession(int sessionId, const PacketCodec::Packet& packet)
+{
+    SendToSessions({ sessionId }, packet);
+}
+
+void CommandDispatcher::SendToSessions(const std::vector<int>& sessionIds, const PacketCodec::Packet& packet)
+{
+    if (packet.empty() || sessionIds.empty()) return;
+    server_.GetSessionManager().SendToSessions(sessionIds, reinterpret_cast<const char*>(packet.data()), static_cast<int>(packet.size()));
+}
+
+void CommandDispatcher::SendToPlayer(PlayerId pid, const PacketCodec::Packet& packet)
+{
+    auto it = playerToSession_.find(pid);
+    if (it != playerToSession_.end()) SendToSession(it->second, packet);
+}
+
+void CommandDispatcher::SendToPlayers(const std::vector<PlayerId>& pids, const PacketCodec::Packet& packet)
+{
+    std::vector<int> ids;
+    for (PlayerId pid : pids) {
+        auto it = playerToSession_.find(pid);
+        if (it != playerToSession_.end()) ids.push_back(it->second);
+    }
+    SendToSessions(ids, packet);
+}
+
+PlayerId CommandDispatcher::PlayerOf(int sessionId) const
+{
+    auto it = sessionToPlayer_.find(sessionId);
+    return it == sessionToPlayer_.end() ? kInvalidPlayerId : it->second;
 }
 
 void CommandDispatcher::Dispatch(const Command& cmd)
@@ -49,23 +90,89 @@ void CommandDispatcher::DispatchPacket(const Command& cmd)
     case MessageType::MARKER_REQUEST:   HandleMarkerRequest(cmd);   break;
 
     default:
-        // ì„œë²„ê°€ ë³´ë‚´ëŠ” ì¢…ë¥˜ì´ê±°ë‚˜ ì •ì˜ë˜ì§€ ì•Šì€ ì¢…ë¥˜
-        std::cout << "[CommandDispatcher] ì„¸ì…˜ " << cmd.sessionId << ": ì²˜ë¦¬í•˜ì§€ ì•ŠëŠ” ë©”ì‹œì§€ ì¢…ë¥˜ "
-                  << type << " " << cmd.packet.size() << "ë°”ì´íŠ¸" << std::endl;
+        // ¼­¹ö°¡ º¸³»´Â Á¾·ùÀÌ°Å³ª Á¤ÀÇµÇÁö ¾ÊÀº Á¾·ù
+        std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": Ã³¸®ÇÏÁö ¾Ê´Â ¸Ş½ÃÁö Á¾·ù "
+            << type << " " << cmd.packet.size() << "¹ÙÀÌÆ®" << std::endl;
         break;
     }
 }
 
-void CommandDispatcher::HandleHello(const Command& cmd)         { LogReceived(cmd, "HELLO"); }
-void CommandDispatcher::HandleJoinMap(const Command& cmd)       { LogReceived(cmd, "JOIN_MAP"); }
-void CommandDispatcher::HandleStartGame(const Command& cmd)     { LogReceived(cmd, "START_GAME"); }
-void CommandDispatcher::HandleLeaveParty(const Command& cmd)   { LogReceived(cmd, "LEAVE_PARTY"); }
-void CommandDispatcher::HandleChatSend(const Command& cmd)      { LogReceived(cmd, "CHAT_SEND"); }
-void CommandDispatcher::HandleSpawn(const Command& cmd)         { LogReceived(cmd, "SPAWN_REQUEST"); }
+void CommandDispatcher::HandleHello(const Command& cmd)
+{
+    Hello hello;
+    PacketHeader header;
+    if (!PacketCodec::Decode(cmd.packet, hello, &header)) {
+        std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": HELLO µğÄÚµù ½ÇÆĞ" << std::endl;
+        return;
+    }
+    if (PlayerOf(cmd.sessionId) != kInvalidPlayerId) return;   // Áßº¹ HELLO ¹«½Ã
+
+    const PlayerId pid = nextPlayerId_++;
+    sessionToPlayer_[cmd.sessionId] = pid;
+    playerToSession_[pid] = cmd.sessionId;
+    players_[pid] = hello.name;
+    std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": HELLO \"" << hello.name << "\" -> ÇÃ·¹ÀÌ¾î " << pid << std::endl;
+
+    Welcome welcome;
+    welcome.playerId = pid;
+    SendToSession(cmd.sessionId, PacketCodec::Encode(welcome, header.requestId));
+    server_.GetLobbyBroadcaster().Invalidate();
+}
+
+void CommandDispatcher::HandleJoinMap(const Command& cmd)
+{
+    const PlayerId pid = PlayerOf(cmd.sessionId);
+    if (pid == kInvalidPlayerId) { std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": HELLO Àü JOIN_MAP ¹«½Ã" << std::endl; return; }
+    partyHandler_.HandleJoinMap(cmd, pid);
+}
+void CommandDispatcher::HandleStartGame(const Command& cmd) { LogReceived(cmd, "START_GAME"); }
+void CommandDispatcher::HandleLeaveParty(const Command& cmd)
+{
+    const PlayerId pid = PlayerOf(cmd.sessionId);
+    if (pid == kInvalidPlayerId) { std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": HELLO Àü LEAVE_PARTY ¹«½Ã" << std::endl; return; }
+    partyHandler_.HandleLeaveParty(cmd, pid);
+}
+void CommandDispatcher::HandleChatSend(const Command& cmd) { LogReceived(cmd, "CHAT_SEND"); }
+void CommandDispatcher::HandleSpawn(const Command& cmd) { LogReceived(cmd, "SPAWN_REQUEST"); }
 void CommandDispatcher::HandleAbortVoteCast(const Command& cmd) { LogReceived(cmd, "ABORT_VOTE_CAST"); }
-void CommandDispatcher::HandleMarkerRequest(const Command& cmd) { LogReceived(cmd, "MARKER_REQUEST"); }
+void CommandDispatcher::HandleMarkerRequest(const Command& cmd)
+{
+    MarkerRequest req;
+    PacketHeader header;
+    if (!PacketCodec::Decode(cmd.packet, req, &header)) {
+        std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": MARKER_REQUEST µğÄÚµù ½ÇÆĞ" << std::endl;
+        return;
+    }
+
+    // HELLO ÀüÀÌ¸é ¼¼¼Ç ¹øÈ£¸¦ ¹ß½ÅÀÚ·Î ¾´´Ù (ÅëÇÕ Å×½ºÆ®¿ë)
+    const PlayerId pid = PlayerOf(cmd.sessionId);
+    MarkerPlaced placed;
+    placed.senderId = pid != kInvalidPlayerId ? pid : static_cast<uint32_t>(cmd.sessionId);
+    placed.x = req.x;
+    placed.y = req.y;
+    const PacketCodec::Packet packet = PacketCodec::Encode(placed, 0);
+
+    // ÆÄÆ¼°¡ ÀÖÀ¸¸é ÆÄÆ¼¿ø ÀüÃ¼, ¾øÀ¸¸é Á¢¼Ó ÁßÀÎ ¸ğµÎ¿¡°Ô º¸³½´Ù (º¸³½ »ç¶÷ Æ÷ÇÔ)
+    PartyManager& parties = server_.GetPartyManager();
+    if (pid != kInvalidPlayerId && parties.IsInParty(pid)) {
+        SendToPlayers(parties.MembersOf(parties.PartyOf(pid)), packet);
+    }
+    else {
+        SendToSessions(server_.GetSessionManager().GetSessionIds(), packet);
+    }
+}
 
 void CommandDispatcher::HandleDisconnected(int sessionId)
 {
-    std::cout << "[CommandDispatcher] ì„¸ì…˜ " << sessionId << ": ì—°ê²° ì¢…ë£Œ ì´ë²¤íŠ¸ ìˆ˜ì‹ " << std::endl;
+    std::cout << "[CommandDispatcher] ¼¼¼Ç " << sessionId << ": ¿¬°á Á¾·á ÀÌº¥Æ® ¼ö½Å" << std::endl;
+
+    auto it = sessionToPlayer_.find(sessionId);
+    if (it == sessionToPlayer_.end()) return;   // HELLO Àü¿¡ ²÷±è
+    const PlayerId pid = it->second;
+
+    partyHandler_.HandlePlayerLeft(pid);        // ÆÄÆ¼¿¡¼­ Á¦°Å, ³²Àº ÆÄÆ¼¿ø¿¡°Ô PARTY_STATE
+    sessionToPlayer_.erase(it);
+    playerToSession_.erase(pid);
+    players_.erase(pid);
+    server_.GetLobbyBroadcaster().Invalidate();
 }

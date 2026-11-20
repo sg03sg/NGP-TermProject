@@ -37,6 +37,8 @@ public:
     void Stop();
 
     SessionManager& GetSessionManager() { return session_manager_; }
+    PartyManager& GetPartyManager() { return partyManager_; }
+    LobbyBroadcaster& GetLobbyBroadcaster() { return lobbyBroadcaster_; }
     void RemoveSession(int sessionId);
     void BroadcastPacket(const char* data, int length);
     bool PushRequest(Command command);   // 요청 큐에 요청 추가, 세션 스레드에서 호출
