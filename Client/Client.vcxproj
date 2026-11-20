@@ -129,10 +129,34 @@
   <ItemGroup>
     <ClCompile Include="clnt_othercom.cpp" />
     <ClCompile Include="NetworkClient.cpp" />
+    <ClCompile Include="EncodingUtil.cpp" />
+    <ClCompile Include="..\PacketCodec.cpp" />
+    <ClCompile Include="..\PacketBuffer.cpp" />
+    <ClCompile Include="GameGlobals.cpp" />
+    <ClCompile Include="GameWindow.cpp" />
+    <ClCompile Include="..\GameFramework.cpp" />
+    <ClCompile Include="..\Renderer.cpp" />
+    <ClCompile Include="..\Unit.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h" />
     <ClInclude Include="NetworkClient.h" />
+    <ClInclude Include="EncodingUtil.h" />
+    <ClInclude Include="LocalPlayer.h" />
+    <ClInclude Include="..\PacketCodec.h" />
+    <ClInclude Include="..\PacketBuffer.h" />
+    <ClInclude Include="..\Message.h" />
+    <ClInclude Include="..\Protocol.h" />
+    <ClInclude Include="GameWindow.h" />
+    <ClInclude Include="..\GameFramework.h" />
+    <ClInclude Include="..\Renderer.h" />
+    <ClInclude Include="..\RendererGlobals.h" />
+    <ClInclude Include="..\GameTypes.h" />
+    <ClInclude Include="..\Unit.h" />
+    <ClInclude Include="..\resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\Resource.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
