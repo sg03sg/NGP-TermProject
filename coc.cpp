@@ -14,7 +14,7 @@
 #pragma comment(lib, "winmm.lib")
 
 HINSTANCE g_hInst;
-BattleInstance gameBattle;
+BattleInstance gameBattle(0);
 LPCTSTR lpszClass = L"Window Class Name";
 LPCTSTR lpszWindowName = L"Window Programming Lab";
 
