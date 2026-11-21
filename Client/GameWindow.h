@@ -8,3 +8,5 @@ HWND GameWindow_Create(HINSTANCE hInst);
 
 // GameFramework 타이머 틱마다 호출
 void GameWindow_OnTimer(int timerId);
+
+int GameWindow_TakeClickedMap();

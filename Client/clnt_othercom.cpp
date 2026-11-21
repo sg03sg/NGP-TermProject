@@ -140,6 +140,28 @@ static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 		break;
 	}
 
+	case MessageType::UNIT_CREATED: {
+		UnitCreated message;
+
+		if (!PacketCodec::Decode(packet, message)) {
+			printf("[오류] UNIT_CREATED 해석 실패\n");
+			return;
+		}
+
+		printf(
+			"[수신] UNIT_CREATED unitId=%u ownerId=%u "
+			"type=%u position=(%u, %u) hp=%u/%u\n",
+			message.unitId,
+			message.ownerId,
+			static_cast<unsigned>(message.unitType),
+			message.x,
+			message.y,
+			message.hp,
+			message.maxHp);
+
+		break;
+	}
+
 	case MessageType::REQUEST_REJECT: {
 		RequestRejected message;
 		PacketHeader header;
@@ -235,6 +257,48 @@ static void HandleInputLine(
 		return;
 	}
 
+	if (command == "spawn") {
+		if (clientState.Screen() != ScreenState::Battle) {
+			printf("전투를 시작한 뒤 소환할 수 있습니다.\n");
+			return;
+		}
+
+		int unitType;
+		long long x, y;
+		std::string extra;
+
+		if (!(input >> unitType >> x >> y) ||
+			(input >> extra) ||
+			unitType < 0 || unitType > 2 ||
+			x < 0 || y < 0 ||
+			x > INT32_MAX || y > INT32_MAX) {
+			printf("사용법: spawn 병종 x y\n");
+			printf("병종: 0=바바리안, 1=아처, 2=자이언트\n");
+			return;
+		}
+
+		SpawnRequest message;
+		message.unitType = static_cast<uint8_t>(unitType);
+		message.x = static_cast<uint32_t>(x);
+		message.y = static_cast<uint32_t>(y);
+
+		const uint32_t requestId = player.IssueRequestId();
+
+		if (SendPacket(
+			client,
+			PacketCodec::Encode(message, requestId))) {
+			printf(
+				"[송신] SPAWN_REQUEST type=%d position=(%u, %u) "
+				"requestId=%u\n",
+				unitType, message.x, message.y, requestId);
+		}
+		else {
+			printf("[오류] SPAWN_REQUEST 전송 실패\n");
+		}
+
+		return;
+	}
+
 	// 기존 좌표 마커 테스트
 	std::istringstream coordinates(line);
 	long long x, y;
@@ -304,11 +368,26 @@ public:
 			GameFramework::Quit();
 			return;
 		}
+
 		if (!m_client.IsConnected()) {
 			GameFramework::Quit();
 			return;
 		}
 
+		// 게임 창에서 클릭한 맵 번호를 꺼낸다.
+		int mapId = GameWindow_TakeClickedMap();
+
+		if (mapId != 0) {
+			const std::string command =
+				"join " + std::to_string(mapId);
+
+			HandleInputLine(
+				command.c_str(),
+				m_client,
+				m_player);
+		}
+
+		// 기존 콘솔 명령도 계속 사용 가능
 		ReadConsoleKeys();
 	}
 
