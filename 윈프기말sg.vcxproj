@@ -131,8 +131,13 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Server;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="BattleInstance.cpp" />
+    <ClCompile Include="Server\BattleInstance.cpp" />
     <ClCompile Include="BattleLogic.cpp" />
     <ClCompile Include="coc.cpp" />
     <ClCompile Include="GameFramework.cpp" />
@@ -142,7 +147,7 @@
     <ClCompile Include="Unit.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BattleInstance.h" />
+    <ClInclude Include="Server\BattleInstance.h" />
     <ClInclude Include="BattleLogic.h" />
     <ClInclude Include="Message.h" />
     <ClInclude Include="PacketBuffer.h" />
