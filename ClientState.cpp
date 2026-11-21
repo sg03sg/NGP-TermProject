@@ -1,4 +1,5 @@
-#include "ClientState.h"
+ï»¿#include "ClientState.h"
+#include <algorithm>
 
 void ClientState::SetMyPlayerId(PlayerId id)
 {
@@ -8,21 +9,27 @@ void ClientState::SetMyPlayerId(PlayerId id)
 
 void ClientState::ApplyPartyState(const PartySnapshot& snap)
 {
+    // ë‚´ê°€ ì—†ëŠ” ëª…ë‹¨ì€ ì´ë¯¸ ë‚˜ê°„ íŒŒí‹°ì˜ ëŠ¦ê²Œ ë„ì°©í•œ ìƒíƒœì´ë¯€ë¡œ ë¬´ì‹œ
+    if (myPlayerId_ != 0 && !snap.members.empty()) {
+        const bool hasMe = std::any_of(snap.members.begin(), snap.members.end(), [this](const PartyMemberInfo& m) { return m.playerId == myPlayerId_; });
+        if (!hasMe) return;
+    }
+
     party_ = snap;
 
-    // ·Îºñ/´ë±âÃ¢ ´Ü°è¿¡¼­¸¸ È­¸éÀ» ¹Ù²Û´Ù.
+    // ë¡œë¹„/ëŒ€ê¸°ì°½ ë‹¨ê³„ì—ì„œë§Œ í™”ë©´ì„ ë°”ê¾¼ë‹¤.
     if (screen_ == ScreenState::Lobby || screen_ == ScreenState::PartyWaiting)
         screen_ = snap.members.empty() ? ScreenState::Lobby : ScreenState::PartyWaiting;
 }
 
 void ClientState::ApplyLobbyState(const std::vector<LobbyMapInfo>& maps)
 {
-    lobbyMaps_ = maps;   // ÁÖ±â ¹æ¼ÛÀÌ¹Ç·Î Ç×»ó ÅëÂ°·Î ±³Ã¼
+    lobbyMaps_ = maps;   // ì£¼ê¸° ë°©ì†¡ì´ë¯€ë¡œ í•­ìƒ í†µì§¸ë¡œ êµì²´
 }
 
 void ClientState::Clear()
 {
-    // ·Îºñ º¹±Í: myPlayerId_¿Í lobbyMaps_´Â À¯Áö
+    // ë¡œë¹„ ë³µê·€: myPlayerId_ì™€ lobbyMaps_ëŠ” ìœ ì§€
     party_ = PartySnapshot{};
     screen_ = ScreenState::Lobby;
     
