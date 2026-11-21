@@ -6,13 +6,17 @@
 #include "../PacketCodec.h"
 #include "../PacketBuffer.h"
 #include "../GameFramework.h"
+#include "ClientState.h"
 #include "GameWindow.h"
 
+#include <sstream>
 #include <conio.h>
 #include <string>
 
 #define SERVERIP   "127.0.0.1"
 #define SERVERPORT 9000
+
+static ClientState clientState;
 
 static bool SendPacket(NetworkClient& client, const PacketCodec::Packet& packet)
 {
@@ -58,6 +62,7 @@ static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 
 		player.playerId = welcome.playerId;
 		player.phase = LocalPlayer::Phase::Joined;
+		clientState.SetMyPlayerId(welcome.playerId);
 		printf("[수신] WELCOME: 내 플레이어 ID = %u\n", player.playerId);
 		printf("좌표를 \"x y\" 형식으로 입력하면 서버로 전송합니다. 예: 3 4\n");
 		break;
@@ -73,6 +78,83 @@ static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 			placed.senderId, player.IsMe(placed.senderId) ? "(나)" : "", placed.x, placed.y);
 		break;
 	}
+	case MessageType::PARTY_STATE: {
+		PartyState message;
+
+		if (!PacketCodec::Decode(packet, message)) {
+			printf("[오류] PARTY_STATE 해석 실패\n");
+			return;
+		}
+
+		clientState.ApplyPartyState(message);
+
+		printf("[수신] PARTY_STATE partyId=%u mapId=%u leaderId=%u members=%zu\n",
+			message.partyId,
+			static_cast<unsigned>(message.mapId),
+			message.leaderId,
+			message.members.size());
+
+		for (const auto& member : message.members) {
+			printf("  playerId=%u%s\n",
+				member.playerId,
+				member.playerId == clientState.MyPlayerId() ? " (나)" : "");
+		}
+		break;
+	}
+
+	case MessageType::BATTLE_INIT: {
+		BattleInit message;
+
+		if (!PacketCodec::Decode(packet, message)) {
+			printf("[오류] BATTLE_INIT 해석 실패\n");
+			return;
+		}
+
+		// 현재 참가한 파티의 전투인지 확인
+		if (!clientState.InParty() ||
+			message.partyId != clientState.Party().partyId) {
+			printf("[오류] 현재 파티와 다른 BATTLE_INIT\n");
+			return;
+		}
+
+		clientState.ApplyBattleInit(message);
+
+		printf("[수신] BATTLE_INIT partyId=%u mapId=%u time=%u\n",
+			message.partyId,
+			static_cast<unsigned>(message.mapId),
+			static_cast<unsigned>(message.remainingSeconds));
+
+		for (const auto& playerInfo : message.players) {
+			printf("  playerId=%u mana=%u/%u\n",
+				playerInfo.playerId,
+				static_cast<unsigned>(playerInfo.mana),
+				static_cast<unsigned>(playerInfo.maxMana));
+		}
+
+		for (const auto& structure : message.structures) {
+			printf("  structureId=%u position=(%u, %u) hp=%u/%u\n",
+				structure.structureId,
+				structure.x, structure.y,
+				structure.hp, structure.maxHp);
+		}
+		break;
+	}
+
+	case MessageType::REQUEST_REJECT: {
+		RequestRejected message;
+		PacketHeader header;
+
+		if (!PacketCodec::Decode(packet, message, &header)) {
+			printf("[오류] REQUEST_REJECT 해석 실패\n");
+			return;
+		}
+
+		printf("[거절] requestId=%u messageType=%u errorCode=%u\n",
+			header.requestId,
+			static_cast<unsigned>(message.rejectedType),
+			static_cast<unsigned>(message.errorCode));
+		break;
+	}
 
 	default:
 		printf("[수신] 처리하지 않는 메시지 종류 %u (%zu바이트)\n", type, packet.size());
@@ -80,20 +162,94 @@ static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 	}
 }
 
-// "x y" 입력을 좌표 패킷으로 전송
-static void HandleInputLine(const char* line, NetworkClient& client, LocalPlayer& player)
+static void HandleInputLine(
+	const char* line,
+	NetworkClient& client,
+	LocalPlayer& player)
 {
-	unsigned int x, y;
-	if (sscanf(line, "%u %u", &x, &y) != 2) {
-		printf("좌표는 \"x y\" 형식으로 입력하세요. 예: 3 4\n");
-		return;
-	}
 	if (player.phase != LocalPlayer::Phase::Joined) {
 		printf("아직 WELCOME을 받지 못했습니다.\n");
 		return;
 	}
-	if (!SendMarker(client, player, x, y))
+
+	std::istringstream input(line);
+	std::string command;
+	input >> command;
+
+	if (command == "join") {
+		int mapId;
+		std::string extra;
+
+		if (!(input >> mapId) || (input >> extra) ||
+			mapId < 1 || mapId > kStageCount) {
+			printf("사용법: join 1 ~ join %u\n",
+				static_cast<unsigned>(kStageCount));
+			return;
+		}
+
+		if (clientState.InParty()) {
+			printf("이미 파티에 참가 중입니다.\n");
+			return;
+		}
+
+		JoinMap message;
+		message.mapId = static_cast<uint8_t>(mapId);
+
+		const uint32_t requestId = player.IssueRequestId();
+
+		if (SendPacket(client, PacketCodec::Encode(message, requestId))) {
+			printf("[송신] JOIN_MAP mapId=%d requestId=%u\n",
+				mapId, requestId);
+		}
+		else {
+			printf("[오류] JOIN_MAP 전송 실패\n");
+		}
+		return;
+	}
+
+	if (command == "start") {
+		std::string extra;
+		if (input >> extra) {
+			printf("사용법: start\n");
+			return;
+		}
+
+		if (clientState.Screen() != ScreenState::PartyWaiting ||
+			!clientState.IsPartyLeader()) {
+			printf("대기 중인 파티의 방장만 시작할 수 있습니다.\n");
+			return;
+		}
+
+		StartGame message;
+		message.partyId = clientState.Party().partyId;
+
+		const uint32_t requestId = player.IssueRequestId();
+
+		if (SendPacket(client, PacketCodec::Encode(message, requestId))) {
+			printf("[송신] START_GAME partyId=%u requestId=%u\n",
+				message.partyId, requestId);
+		}
+		else {
+			printf("[오류] START_GAME 전송 실패\n");
+		}
+		return;
+	}
+
+	// 기존 좌표 마커 테스트
+	std::istringstream coordinates(line);
+	long long x, y;
+	std::string extra;
+
+	if (!(coordinates >> x >> y) || (coordinates >> extra) ||
+		x < 0 || y < 0 || x > UINT32_MAX || y > UINT32_MAX) {
+		printf("명령: join 1 / start / x y / q\n");
+		return;
+	}
+
+	if (!SendMarker(client, player,
+		static_cast<uint32_t>(x), static_cast<uint32_t>(y))) {
 		printf("[오류] 좌표 전송 실패\n");
+	}
 }
 
 // 수신 큐의 바이트를 PacketBuffer에 넣고 완성된 패킷 처리
