@@ -63,10 +63,17 @@ void MapUI::Draw(HDC hdc, const std::vector<LobbyMapInfo>& mapList)
         DrawLabel(hdc, statusArea, status, RGB(255, 255, 255), 26, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     }
 
-    if (!message_.empty()) {
-        RECT messageArea = { 0, 600, kScreenWidth, 660 };
-        DrawLabel(hdc, messageArea, message_, RGB(255, 220, 120), 28, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-    }
+    DrawMessage(hdc);
+}
+
+void MapUI::DrawMessage(HDC hdc)
+{
+    if (message_.empty()) return;
+
+    // 배경 그림 위에서도 읽히도록 어두운 바탕 위에 표시
+    RECT messageArea = { 340, 600, 940, 660 };
+    DrawBox(hdc, messageArea, RGB(20, 20, 30), RGB(200, 200, 200));
+    DrawLabel(hdc, messageArea, message_, RGB(255, 220, 120), 28, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 }
 
 bool MapUI::OnMapClicked(uint8_t mapId)

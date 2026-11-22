@@ -18,9 +18,10 @@ public:
 
     
     void Draw(HDC hdc, const std::vector<LobbyMapInfo>& mapList);   // 클라이언트가 가진 맵 목록 표시
+    void DrawMessage(HDC hdc);                                      // 안내 문구만 표시, 다른 화면 위에 얹을 때 사용
     bool OnMapClicked(uint8_t mapId);                               // 선택한 맵의 참가 요청 생성·전송
 
-    
+
     bool HandleClick(int x, int y, const std::vector<LobbyMapInfo>& mapList);   // 마우스 좌표가 맵 버튼 위면 OnMapClicked 호출
     void OnJoined();                                                            // 참가 성공
     void OnRejected(uint32_t requestId, uint16_t errorCode);                    // 서버가 참가를 거절

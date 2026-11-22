@@ -97,12 +97,40 @@ bool LobbyScreen::HandlePacketImpl(const PacketCodec::Packet& packet)
 
 bool LobbyScreen::OnLButtonDown(int x, int y)
 {
-    bool onButton = false;
-    if (state_.Screen() == ScreenState::Lobby)             onButton = mapUI_.HandleClick(x, y, MapList());
-    else if (state_.Screen() == ScreenState::PartyWaiting) onButton = partyUI_.HandleClick(x, y);
+    // 맵 선택은 게임 화면의 문 클릭이 OnMapClicked로 넘어오므로 여기서는 파티 대기창만 처리
+    if (state_.Screen() != ScreenState::PartyWaiting) return false;
 
+    const bool onButton = partyUI_.HandleClick(x, y);
     if (onButton) Invalidate();
     return onButton;
+}
+
+bool LobbyScreen::OnMapClicked(uint8_t mapId)
+{
+    const bool sent = mapUI_.OnMapClicked(mapId);
+    Invalidate();
+    return sent;
+}
+
+void LobbyScreen::OnBattleInit(const BattleInit& message)
+{
+    state_.ApplyBattleInit(message);
+    mapUI_.Reset();
+    partyUI_.Reset();
+    Invalidate();
+}
+
+bool LobbyScreen::IsPartyVisible() const
+{
+    return state_.Screen() == ScreenState::PartyWaiting;
+}
+
+void LobbyScreen::PaintOverlay(HDC hdc)
+{
+    if (state_.Screen() == ScreenState::PartyWaiting)
+        partyUI_.Draw(hdc, state_.Party());   // 서버가 보낸 최신 파티 정보로 매번 다시 그림
+    else if (state_.Screen() == ScreenState::Lobby)
+        mapUI_.DrawMessage(hdc);
 }
 
 void LobbyScreen::Paint(HWND hWnd, HDC hdc)

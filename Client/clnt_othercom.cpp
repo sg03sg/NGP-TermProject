@@ -7,6 +7,7 @@
 #include "../PacketBuffer.h"
 #include "../GameFramework.h"
 #include "ClientState.h"
+#include "LobbyScreen.h"
 #include "GameWindow.h"
 
 #include <sstream>
@@ -16,7 +17,8 @@
 #define SERVERIP   "127.0.0.1"
 #define SERVERPORT 9000
 
-static ClientState clientState;
+// 로비·파티 상태와 화면은 LobbyScreen이 소유하고 여기서는 가리키기만 한다.
+static LobbyScreen* lobby = nullptr;
 
 static bool SendPacket(NetworkClient& client, const PacketCodec::Packet& packet)
 {
@@ -46,6 +48,9 @@ static uint16_t MessageTypeOf(const PacketCodec::Packet& packet)
 
 static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 {
+	// PARTY_STATE, LEAVE_APPROVED, REQUEST_REJECT는 LobbyScreen이 상태에 반영하고 화면을 갱신
+	if (lobby->HandlePacket(packet)) return;
+
 	uint16_t type = MessageTypeOf(packet);
 
 	switch (static_cast<MessageType>(type)) {
@@ -62,7 +67,7 @@ static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 
 		player.playerId = welcome.playerId;
 		player.phase = LocalPlayer::Phase::Joined;
-		clientState.SetMyPlayerId(welcome.playerId);
+		lobby->OnWelcome(welcome.playerId);
 		printf("[수신] WELCOME: 내 플레이어 ID = %u\n", player.playerId);
 		printf("좌표를 \"x y\" 형식으로 입력하면 서버로 전송합니다. 예: 3 4\n");
 		break;
@@ -78,30 +83,6 @@ static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 			placed.senderId, player.IsMe(placed.senderId) ? "(나)" : "", placed.x, placed.y);
 		break;
 	}
-	case MessageType::PARTY_STATE: {
-		PartyState message;
-
-		if (!PacketCodec::Decode(packet, message)) {
-			printf("[오류] PARTY_STATE 해석 실패\n");
-			return;
-		}
-
-		clientState.ApplyPartyState(message);
-
-		printf("[수신] PARTY_STATE partyId=%u mapId=%u leaderId=%u members=%zu\n",
-			message.partyId,
-			static_cast<unsigned>(message.mapId),
-			message.leaderId,
-			message.members.size());
-
-		for (const auto& member : message.members) {
-			printf("  playerId=%u%s\n",
-				member.playerId,
-				member.playerId == clientState.MyPlayerId() ? " (나)" : "");
-		}
-		break;
-	}
-
 	case MessageType::BATTLE_INIT: {
 		BattleInit message;
 
@@ -111,13 +92,15 @@ static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 		}
 
 		// 현재 참가한 파티의 전투인지 확인
-		if (!clientState.InParty() ||
-			message.partyId != clientState.Party().partyId) {
+		if (!lobby->State().InParty() ||
+			message.partyId != lobby->State().Party().partyId) {
 			printf("[오류] 현재 파티와 다른 BATTLE_INIT\n");
 			return;
 		}
 
-		clientState.ApplyBattleInit(message);
+		// 클라이언트 상태를 전투로 바꾸고 게임 화면을 해당 스테이지의 전투 화면으로 전환
+		lobby->OnBattleInit(message);
+		GameWindow_EnterBattle(message, lobby->State().MyPlayerId());
 
 		printf("[수신] BATTLE_INIT partyId=%u mapId=%u time=%u\n",
 			message.partyId,
@@ -162,22 +145,6 @@ static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 		break;
 	}
 
-	case MessageType::REQUEST_REJECT: {
-		RequestRejected message;
-		PacketHeader header;
-
-		if (!PacketCodec::Decode(packet, message, &header)) {
-			printf("[오류] REQUEST_REJECT 해석 실패\n");
-			return;
-		}
-
-		printf("[거절] requestId=%u messageType=%u errorCode=%u\n",
-			header.requestId,
-			static_cast<unsigned>(message.rejectedType),
-			static_cast<unsigned>(message.errorCode));
-		break;
-	}
-
 	default:
 		printf("[수신] 처리하지 않는 메시지 종류 %u (%zu바이트)\n", type, packet.size());
 		break;
@@ -209,7 +176,7 @@ static void HandleInputLine(
 			return;
 		}
 
-		if (clientState.InParty()) {
+		if (lobby->State().InParty()) {
 			printf("이미 파티에 참가 중입니다.\n");
 			return;
 		}
@@ -236,14 +203,14 @@ static void HandleInputLine(
 			return;
 		}
 
-		if (clientState.Screen() != ScreenState::PartyWaiting ||
-			!clientState.IsPartyLeader()) {
+		if (lobby->State().Screen() != ScreenState::PartyWaiting ||
+			!lobby->State().IsPartyLeader()) {
 			printf("대기 중인 파티의 방장만 시작할 수 있습니다.\n");
 			return;
 		}
 
 		StartGame message;
-		message.partyId = clientState.Party().partyId;
+		message.partyId = lobby->State().Party().partyId;
 
 		const uint32_t requestId = player.IssueRequestId();
 
@@ -258,7 +225,7 @@ static void HandleInputLine(
 	}
 
 	if (command == "spawn") {
-		if (clientState.Screen() != ScreenState::Battle) {
+		if (lobby->State().Screen() != ScreenState::Battle) {
 			printf("전투를 시작한 뒤 소환할 수 있습니다.\n");
 			return;
 		}
@@ -374,17 +341,11 @@ public:
 			return;
 		}
 
-		// 게임 창에서 클릭한 맵 번호를 꺼낸다.
+		// 게임 창에서 클릭한 맵 번호를 꺼내 MapUI로 참가 요청
 		int mapId = GameWindow_TakeClickedMap();
 
-		if (mapId != 0) {
-			const std::string command =
-				"join " + std::to_string(mapId);
-
-			HandleInputLine(
-				command.c_str(),
-				m_client,
-				m_player);
+		if (mapId != 0 && m_player.phase == LocalPlayer::Phase::Joined) {
+			lobby->OnMapClicked(static_cast<uint8_t>(mapId));
 		}
 
 		// 기존 콘솔 명령도 계속 사용 가능
@@ -492,10 +453,19 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	// 로비 화면은 서버로 보내는 방법과 요청 번호 발급기를 받아 동작
+	LobbyScreen lobbyScreen(
+		[&client](const PacketCodec::Packet& packet) { return SendPacket(client, packet); },
+		[&player]() { return player.IssueRequestId(); });
+	lobbyScreen.SetWindow(hWnd);
+	lobby = &lobbyScreen;
+	GameWindow_SetLobby(&lobbyScreen);
+
 	PacketBuffer packetBuffer;
 	ClientMode mode(client, player, packetBuffer);
 	GameFramework::Run(hWnd, &mode);
 
+	GameWindow_SetLobby(nullptr);
 	if (IsWindow(hWnd)) DestroyWindow(hWnd);
 
 	if (!client.IsConnected()) {
