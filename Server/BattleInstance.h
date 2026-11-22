@@ -19,6 +19,9 @@ constexpr uint16_t kInitialMana = 100;
 // ---- 열거형 ----
 enum class UnitAction : uint8_t { Move = 0, Attack = 1 };
 
+// 구조물 종류, BATTLE_INIT의 type과 같은 값
+enum class StructureKind : uint8_t { TownHall = 0, Cannon = 1, Mortar = 2, Inferno = 3 };
+
 // 소환 거부 사유 (REQUEST_REJECTED의 errorCode로 매핑)
 enum class ErrorCode : uint16_t {
     None = 0,
@@ -55,6 +58,7 @@ struct Tower {                  // towers_ : 적 방어타워 사본
     uint32_t hp = 0;
     uint32_t maxHp = 0;
     bool     destroyed = false;
+    uint8_t  type = static_cast<uint8_t>(StructureKind::Cannon);   // StructureKind 값
 };
 
 struct Structure {              // townHall_ : 핵심 구조물

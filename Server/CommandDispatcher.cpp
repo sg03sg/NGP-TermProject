@@ -1,6 +1,7 @@
 ﻿#include "CommandDispatcher.h"
 #include "GameServer.h"
 #include "Protocol.h"
+#include "MapCatalog.h"
 #include <iostream>
 
 namespace {
@@ -311,14 +312,12 @@ void CommandDispatcher::HandleStartGame(const Command& cmd)
         return;
     }
 
-    // 테스트용 맵: 실제 맵 데이터 로더 연결 전 임시 데이터.
+    // 확정된 인원에 맞는 스테이지 맵 데이터 생성
     MapData map;
-    map.id = party->GetMapId();
-    map.townHall.id = 1;
-    map.townHall.pos = Position{ 600, 300 };
-    map.townHall.hp = 1000;
-    map.townHall.maxHp = 1000;
-    map.townHall.destroyed = false;
+    if (!BuildMapData(static_cast<MapDataId>(party->GetMapId()), party->Size(), map)) {
+        reject(PartyError::InvalidStage);
+        return;
+    }
 
     auto battle = std::make_unique<BattleInstance>(party->Id());
 

@@ -258,21 +258,21 @@ BattleInit BattleInstance::BuildBattleInit() const
     message.playerCount =
         static_cast<uint8_t>(message.players.size());
 
-    // 이번 테스트에서는 type 0을 마을회관으로 사용한다.
+    // 마을회관을 먼저 담고 이어서 방어타워
     StructureInitInfo townHall;
     townHall.structureId = townHall_.id;
-    townHall.type = 0;
+    townHall.type = static_cast<uint8_t>(StructureKind::TownHall);
     townHall.x = static_cast<uint32_t>(townHall_.pos.x);
     townHall.y = static_cast<uint32_t>(townHall_.pos.y);
     townHall.hp = townHall_.hp;
     townHall.maxHp = townHall_.maxHp;
     message.structures.push_back(townHall);
 
-    // type 1은 테스트용 방어타워.
+    // 타워 종류는 맵 데이터의 type 값을 그대로 사용
     for (const Tower& tower : towers_) {
         StructureInitInfo structure;
         structure.structureId = tower.id;
-        structure.type = 1;
+        structure.type = tower.type;
         structure.x = static_cast<uint32_t>(tower.pos.x);
         structure.y = static_cast<uint32_t>(tower.pos.y);
         structure.hp = tower.hp;

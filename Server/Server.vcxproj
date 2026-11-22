@@ -94,6 +94,7 @@
     <ClCompile Include="PartyManager.cpp" />
     <ClCompile Include="PartyCommandHandler.cpp" />
     <ClCompile Include="BattleInstance.cpp" />
+    <ClCompile Include="MapCatalog.cpp" />
     <ClCompile Include="..\PacketCodec.cpp" />
     <ClCompile Include="..\PacketBuffer.cpp" />
     <ClCompile Include="..\LobbyState.cpp" />
@@ -111,6 +112,7 @@
     <ClInclude Include="PartyManager.h" />
     <ClInclude Include="PartyCommandHandler.h" />
     <ClInclude Include="BattleInstance.h" />
+    <ClInclude Include="MapCatalog.h" />
     <ClInclude Include="..\PacketCodec.h" />
     <ClInclude Include="..\PacketBuffer.h" />
     <ClInclude Include="..\Protocol.h" />
