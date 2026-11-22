@@ -3,6 +3,7 @@
 #include "../Renderer.h"
 #include "../RendererGlobals.h"
 #include "LobbyScreen.h"
+#include "InputController.h"
 #include "LobbyUiCommon.h"
 
 namespace {
@@ -12,9 +13,9 @@ namespace {
 	const int WINDOW_WIDTH = 1280;
 	const int WINDOW_HEIGHT = 940;
 
-	int clickedMapId = 0;
 	HWND mainWindow = NULL;
 	LobbyScreen* lobby = nullptr;
+	InputController* input = nullptr;
 
 	LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
@@ -23,35 +24,10 @@ namespace {
 			Renderer_Init(((LPCREATESTRUCT)lParam)->hInstance);
 			break;
 		
-		case WM_LBUTTONDOWN: {
-			// 기존 coc.cpp 방식
-			int x = LOWORD(lParam);
-			int y = HIWORD(lParam);
-
-			if (isLoading) {
-				return 0;
-			}
-
-			// 파티 대기창이 떠 있는 동안에는 대기창 버튼만 받고 뒤의 문 클릭은 막는다.
-			if (lobby != nullptr && lobby->IsPartyVisible()) {
-				lobby->OnLButtonDown(x, y);
-				return 0;
-			}
-
-			if (gameState == STATE_MENU) {
-				for (int i = 0; i < DOOR_COUNT; i++) {
-					if (PtInRect(&doorRects[i], POINT{ x, y })) {
-						// 아직 처리하지 않은 클릭이 있으면 유지한다.
-						if (clickedMapId == 0) {
-							clickedMapId = i + 1;
-						}
-						return 0;
-					}
-				}
-			}
-
+		case WM_LBUTTONDOWN:
+			// 클릭 위치 판별과 화면별 분배는 InputController가 담당
+			if (input != nullptr) input->OnLButtonDown(LOWORD(lParam), HIWORD(lParam));
 			return 0;
-		}
 
 		case WM_PAINT: {
 			PAINTSTRUCT ps;
@@ -94,8 +70,6 @@ namespace {
 
 HWND GameWindow_Create(HINSTANCE hInst)
 {
-	clickedMapId = 0;
-
 	WNDCLASSEX wc = { 0 };
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style = CS_HREDRAW | CS_VREDRAW;
@@ -147,17 +121,14 @@ void GameWindow_OnTimer(int timerId)
 	}
 }
 
-int GameWindow_TakeClickedMap()
-{
-	int mapId = clickedMapId;
-	clickedMapId = 0;
-
-	return mapId;
-}
-
 void GameWindow_SetLobby(LobbyScreen* lobbyScreen)
 {
 	lobby = lobbyScreen;
+}
+
+void GameWindow_SetInput(InputController* inputController)
+{
+	input = inputController;
 }
 
 void GameWindow_EnterBattle(const BattleInit& message, uint32_t myPlayerId)

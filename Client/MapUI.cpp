@@ -104,19 +104,6 @@ bool MapUI::OnMapClicked(uint8_t mapId)
     return true;
 }
 
-bool MapUI::HandleClick(int x, int y, const std::vector<LobbyMapInfo>& mapList)
-{
-    const POINT point = { x, y };
-    for (size_t i = 0; i < mapList.size(); ++i) {
-        const RECT button = ButtonRect(i, mapList.size());
-        if (PtInRect(&button, point)) {
-            OnMapClicked(mapList[i].mapId);
-            return true;
-        }
-    }
-    return false;
-}
-
 void MapUI::OnJoined()
 {
     pendingRequestId_ = 0;

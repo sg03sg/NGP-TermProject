@@ -24,15 +24,13 @@ public:
     bool OnStartClicked();                              // 시작 요청 전송, 방장만
     bool OnLeaveClicked();                              // 퇴장 요청 전송
 
-    
-    bool HandleClick(int x, int y);                           // 마우스 좌표가 시작·나가기 버튼 위인지 판별
+    static RECT StartButtonRect();                            // 시작 버튼의 화면 좌표, 클릭 판별은 InputController가 사용
+    static RECT LeaveButtonRect();                            // 나가기 버튼의 화면 좌표
     void OnLeaveApproved();                                   // 퇴장 승인 수신
     void OnRejected(uint32_t requestId, uint16_t errorCode);  // 서버가 시작·퇴장을 거절
     void Reset();
 
 private:
-    static RECT StartButtonRect();
-    static RECT LeaveButtonRect();
     void LoadBitmaps();                      // 리소스의 파티 창 이미지를 처음 그릴 때 한 번 로드
 
     const ClientState& state_;

@@ -8,6 +8,7 @@
 #include "../GameFramework.h"
 #include "ClientState.h"
 #include "LobbyScreen.h"
+#include "InputController.h"
 #include "GameWindow.h"
 
 #include <sstream>
@@ -341,13 +342,6 @@ public:
 			return;
 		}
 
-		// 게임 창에서 클릭한 맵 번호를 꺼내 MapUI로 참가 요청
-		int mapId = GameWindow_TakeClickedMap();
-
-		if (mapId != 0 && m_player.phase == LocalPlayer::Phase::Joined) {
-			lobby->OnMapClicked(static_cast<uint8_t>(mapId));
-		}
-
 		// 기존 콘솔 명령도 계속 사용 가능
 		ReadConsoleKeys();
 	}
@@ -461,10 +455,15 @@ int main(int argc, char* argv[])
 	lobby = &lobbyScreen;
 	GameWindow_SetLobby(&lobbyScreen);
 
+	// 창의 클릭은 InputController가 받아 로비와 파티 UI로 분배
+	InputController inputController(lobbyScreen);
+	GameWindow_SetInput(&inputController);
+
 	PacketBuffer packetBuffer;
 	ClientMode mode(client, player, packetBuffer);
 	GameFramework::Run(hWnd, &mode);
 
+	GameWindow_SetInput(nullptr);
 	GameWindow_SetLobby(nullptr);
 	if (IsWindow(hWnd)) DestroyWindow(hWnd);
 

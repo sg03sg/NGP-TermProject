@@ -95,19 +95,23 @@ bool LobbyScreen::HandlePacketImpl(const PacketCodec::Packet& packet)
     }
 }
 
-bool LobbyScreen::OnLButtonDown(int x, int y)
-{
-    // 맵 선택은 게임 화면의 문 클릭이 OnMapClicked로 넘어오므로 여기서는 파티 대기창만 처리
-    if (state_.Screen() != ScreenState::PartyWaiting) return false;
-
-    const bool onButton = partyUI_.HandleClick(x, y);
-    if (onButton) Invalidate();
-    return onButton;
-}
-
 bool LobbyScreen::OnMapClicked(uint8_t mapId)
 {
     const bool sent = mapUI_.OnMapClicked(mapId);
+    Invalidate();
+    return sent;
+}
+
+bool LobbyScreen::OnStartClicked()
+{
+    const bool sent = partyUI_.OnStartClicked();
+    Invalidate();
+    return sent;
+}
+
+bool LobbyScreen::OnLeaveClicked()
+{
+    const bool sent = partyUI_.OnLeaveClicked();
     Invalidate();
     return sent;
 }

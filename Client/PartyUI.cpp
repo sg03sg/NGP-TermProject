@@ -156,17 +156,6 @@ bool PartyUI::OnLeaveClicked()
     return true;
 }
 
-bool PartyUI::HandleClick(int x, int y)
-{
-    const POINT point = { x, y };
-    const RECT start = StartButtonRect();
-    const RECT leave = LeaveButtonRect();
-
-    if (PtInRect(&start, point)) { OnStartClicked(); return true; }
-    if (PtInRect(&leave, point)) { OnLeaveClicked(); return true; }
-    return false;
-}
-
 void PartyUI::OnLeaveApproved()
 {
     pendingLeaveId_ = 0;
