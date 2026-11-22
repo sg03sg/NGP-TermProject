@@ -14,8 +14,12 @@ public:
     using RequestIdFn = MapUI::RequestIdFn;
 
     PartyUI(const ClientState& state, SendFn send, RequestIdFn nextRequestId);
+    ~PartyUI();
 
-    
+    PartyUI(const PartyUI&) = delete;
+    PartyUI& operator=(const PartyUI&) = delete;
+
+
     void Draw(HDC hdc, const PartyState& partyState);   // 참가자 명단 표시
     bool OnStartClicked();                              // 시작 요청 전송, 방장만
     bool OnLeaveClicked();                              // 퇴장 요청 전송
@@ -29,10 +33,13 @@ public:
 private:
     static RECT StartButtonRect();
     static RECT LeaveButtonRect();
+    void LoadBitmaps();                      // 리소스의 파티 창 이미지를 처음 그릴 때 한 번 로드
 
     const ClientState& state_;
     SendFn             send_;
     RequestIdFn        nextRequestId_;
     uint32_t           pendingLeaveId_ = 0;   // 응답을 기다리는 퇴장 요청 번호
     std::wstring       message_;
+    HBITMAP            panelBitmap_ = nullptr;      // 파티 창 이미지
+    HBITMAP            startOffBitmap_ = nullptr;   // 방장이 아닐 때 시작 버튼 자리에 덮는 회색 버튼 이미지
 };

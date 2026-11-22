@@ -49,6 +49,8 @@
 #define IDB_BITMAP40                    154
 #define IDB_BITMAP7                     155
 #define IDB_BITMAP41                    158
+#define IDB_PARTY_WINDOW                159
+#define IDB_PARTY_START_OFF             160
 #define ID_TOOLS_RESET                  40002
 #define ID_SPEED_FAST                   40003
 #define ID_SPEED_SLOW                   40004
@@ -58,7 +60,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        159
+#define _APS_NEXT_RESOURCE_VALUE        161
 #define _APS_NEXT_COMMAND_VALUE         40007
 #define _APS_NEXT_CONTROL_VALUE         1001
 #define _APS_NEXT_SYMED_VALUE           101

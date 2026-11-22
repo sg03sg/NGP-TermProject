@@ -1,12 +1,60 @@
 ﻿#include "PartyUI.h"
 #include "LobbyUiCommon.h"
+#include "../resource.h"
+
+#pragma comment(lib, "msimg32.lib")
 
 namespace {
-    constexpr int kSlotLeft = 380;
-    constexpr int kSlotWidth = 520;
-    constexpr int kSlotTop = 220;
-    constexpr int kSlotHeight = 70;
-    constexpr int kSlotStep = 90;
+    // 파티 창 이미지 크기와 화면 중앙 배치
+    constexpr int kPanelWidth = 480;
+    constexpr int kPanelHeight = 480;
+    constexpr int kPanelLeft = (kScreenWidth - kPanelWidth) / 2;
+    constexpr int kPanelTop = (kScreenHeight - kPanelHeight) / 2;
+
+    // 이미지 안쪽 좌표
+    constexpr int kStageTop = 62;
+    constexpr int kStageHeight = 26;
+    constexpr int kSlotLeft = 30;
+    constexpr int kSlotWidth = 420;
+    constexpr int kSlotTop = 100;
+    constexpr int kSlotHeight = 52;
+    constexpr int kSlotStep = 64;
+    constexpr int kSlotNumberWidth = 40;   // 슬롯 왼쪽의 번호가 차지하는 폭
+    constexpr int kMessageTop = 362;
+    constexpr int kMessageHeight = 32;
+    constexpr int kButtonTop = 410;
+    constexpr int kButtonWidth = 140;
+    constexpr int kButtonHeight = 46;
+    constexpr int kStartLeft = 60;
+    constexpr int kLeaveLeft = 280;
+    constexpr int kStartOffMargin = 4;   // 회색 버튼 이미지가 시작 버튼보다 사방으로 더 크게 덮는 폭
+
+    constexpr COLORREF kTransparentColor = RGB(255, 0, 255);
+
+    HBITMAP LoadResourceBitmap(int resourceId)
+    {
+        return (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(resourceId), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    }
+
+    // 마젠타를 투명색으로 두고 이미지를 화면 좌표에 그림
+    void DrawTransparentBitmap(HDC hdc, HBITMAP bitmap, int x, int y)
+    {
+        if (bitmap == nullptr) return;
+
+        BITMAP info;
+        GetObject(bitmap, sizeof(info), &info);
+
+        HDC memDC = CreateCompatibleDC(hdc);
+        HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, bitmap);
+        TransparentBlt(hdc, x, y, info.bmWidth, info.bmHeight, memDC, 0, 0, info.bmWidth, info.bmHeight, kTransparentColor);
+        SelectObject(memDC, oldBitmap);
+        DeleteDC(memDC);
+    }
+
+    RECT ScreenRect(int left, int top, int width, int height)
+    {
+        return RECT{ kPanelLeft + left, kPanelTop + top, kPanelLeft + left + width, kPanelTop + top + height };
+    }
 }
 
 PartyUI::PartyUI(const ClientState& state, SendFn send, RequestIdFn nextRequestId) : state_(state), send_(std::move(send)), nextRequestId_(std::move(nextRequestId))
@@ -14,22 +62,36 @@ PartyUI::PartyUI(const ClientState& state, SendFn send, RequestIdFn nextRequestI
 
 }
 
-RECT PartyUI::StartButtonRect() { return RECT{ 430, 780, 610, 840 }; }
-RECT PartyUI::LeaveButtonRect() { return RECT{ 670, 780, 850, 840 }; }
+PartyUI::~PartyUI()
+{
+    if (panelBitmap_) DeleteObject(panelBitmap_);
+    if (startOffBitmap_) DeleteObject(startOffBitmap_);
+}
+
+void PartyUI::LoadBitmaps()
+{
+    if (panelBitmap_ == nullptr)    panelBitmap_ = LoadResourceBitmap(IDB_PARTY_WINDOW);
+    if (startOffBitmap_ == nullptr) startOffBitmap_ = LoadResourceBitmap(IDB_PARTY_START_OFF);
+}
+
+RECT PartyUI::StartButtonRect() { return ScreenRect(kStartLeft, kButtonTop, kButtonWidth, kButtonHeight); }
+RECT PartyUI::LeaveButtonRect() { return ScreenRect(kLeaveLeft, kButtonTop, kButtonWidth, kButtonHeight); }
 
 void PartyUI::Draw(HDC hdc, const PartyState& partyState)
 {
-    RECT title = { 0, 100, kScreenWidth, 180 };
-    DrawLabel(hdc, title, L"파티 대기실 · 스테이지 " + std::to_wstring(partyState.mapId), RGB(255, 255, 255), 40, DT_CENTER | DT_VCENTER | DT_SINGLELINE, true);
+    LoadBitmaps();
+    DrawTransparentBitmap(hdc, panelBitmap_, kPanelLeft, kPanelTop);
 
-    // 정원(4명)만큼 칸을 그리고, 비어 있으면 빈자리로 표시
+    // 스테이지 정보는 제목 아래에 표시
+    const RECT stageArea = ScreenRect(0, kStageTop, kPanelWidth, kStageHeight);
+    DrawLabel(hdc, stageArea, L"스테이지 " + std::to_wstring(partyState.mapId), RGB(169, 187, 223), 20, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+    // 정원만큼 슬롯을 순서대로 채우고 남는 슬롯은 빈자리로 표시
     for (int i = 0; i < kMaxPartyMembers; ++i) {
-        RECT slot = { kSlotLeft, kSlotTop + i * kSlotStep, kSlotLeft + kSlotWidth, kSlotTop + i * kSlotStep + kSlotHeight };
-        const bool filled = i < (int)partyState.members.size();
+        const RECT slot = ScreenRect(kSlotLeft + kSlotNumberWidth, kSlotTop + i * kSlotStep, kSlotWidth - kSlotNumberWidth * 2, kSlotHeight);
 
-        if (!filled) {
-            DrawBox(hdc, slot, RGB(35, 35, 45), RGB(90, 90, 100));
-            DrawLabel(hdc, slot, L"빈자리", RGB(120, 120, 130), 28, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        if (i >= (int)partyState.members.size()) {
+            DrawLabel(hdc, slot, L"빈자리", RGB(125, 137, 166), 22, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
             continue;
         }
 
@@ -38,24 +100,19 @@ void PartyUI::Draw(HDC hdc, const PartyState& partyState)
         if (member.playerId == partyState.leaderId) text += L"  [방장]";
         if (member.playerId == state_.MyPlayerId())  text += L"  (나)";
 
-        DrawBox(hdc, slot, RGB(40, 70, 100), RGB(230, 230, 230));
-        DrawLabel(hdc, slot, text, RGB(255, 255, 255), 30, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        DrawLabel(hdc, slot, text, RGB(255, 255, 255), 22, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     }
 
     if (!message_.empty()) {
-        RECT messageArea = { 0, 700, kScreenWidth, 760 };
-        DrawLabel(hdc, messageArea, message_, RGB(255, 220, 120), 28, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        const RECT messageArea = ScreenRect(0, kMessageTop, kPanelWidth, kMessageHeight);
+        DrawLabel(hdc, messageArea, message_, RGB(255, 220, 120), 20, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     }
 
-    // 시작 버튼은 방장만 쓸 수 있으므로 아니면 회색으로
-    const bool canStart = state_.IsPartyLeader();
-    const RECT start = StartButtonRect();
-    DrawBox(hdc, start, canStart ? RGB(40, 120, 70) : RGB(70, 70, 70), RGB(230, 230, 230));
-    DrawLabel(hdc, start, L"시작", canStart ? RGB(255, 255, 255) : RGB(140, 140, 140), 30, DT_CENTER | DT_VCENTER | DT_SINGLELINE, true);
-
-    const RECT leave = LeaveButtonRect();
-    DrawBox(hdc, leave, RGB(130, 50, 50), RGB(230, 230, 230));
-    DrawLabel(hdc, leave, L"나가기", RGB(255, 255, 255), 30, DT_CENTER | DT_VCENTER | DT_SINGLELINE, true);
+    // 시작 버튼은 방장만 쓸 수 있으므로 방장이 아니면 회색 버튼으로 덮음
+    if (!state_.IsPartyLeader()) {
+        const RECT start = StartButtonRect();
+        DrawTransparentBitmap(hdc, startOffBitmap_, start.left - kStartOffMargin, start.top - kStartOffMargin);
+    }
 }
 
 bool PartyUI::OnStartClicked()
