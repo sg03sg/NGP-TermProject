@@ -22,3 +22,12 @@ void GameWindow_SetInput(InputController* input);
 
 // BATTLE_INIT 내용으로 구조물·마나·시간을 채우고 해당 스테이지의 전투 화면으로 전환
 void GameWindow_EnterBattle(const BattleInit& message, uint32_t myPlayerId);
+
+// 창을 다시 그리도록 요청
+void GameWindow_Invalidate();
+
+// 서버가 알린 병력 생성(UNIT_CREATED)을 전투 화면의 병력에 반영
+void GameWindow_ApplyUnitCreated(const UnitCreated& message);
+
+// 서버가 알린 내 마나(MANA_STATE)를 전투 화면에 반영
+void GameWindow_ApplyManaState(const ManaState& state);

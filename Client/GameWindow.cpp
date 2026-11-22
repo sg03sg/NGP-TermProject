@@ -33,14 +33,18 @@ namespace {
 			PAINTSTRUCT ps;
 			HDC hDC = BeginPaint(hWnd, &ps);
 
-			if (lobby != nullptr && !isLoading && gameState == STATE_MENU) {
-				// 기존 메뉴 화면을 백버퍼에 그린 뒤 파티 대기창을 얹어 한 번에 복사
+			const bool menuOverlay = lobby != nullptr && !isLoading && gameState == STATE_MENU;
+			const bool battleOverlay = input != nullptr && !isLoading && gameState >= STATE_STAGE1 && gameState <= STATE_STAGE3;
+
+			if (menuOverlay || battleOverlay) {
+				// 기존 화면을 백버퍼에 그린 뒤 메뉴의 파티 대기창이나 전투의 병종 선택 표시를 얹어 한 번에 복사
 				HDC memDC = CreateCompatibleDC(hDC);
 				HBITMAP backBuffer = CreateCompatibleBitmap(hDC, kScreenWidth, kScreenHeight);
 				HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, backBuffer);
 
 				Renderer_Paint(hWnd, memDC);
-				lobby->PaintOverlay(memDC);
+				if (menuOverlay) lobby->PaintOverlay(memDC);
+				if (battleOverlay) input->PaintOverlay(memDC);
 				BitBlt(hDC, 0, 0, kScreenWidth, kScreenHeight, memDC, 0, 0, SRCCOPY);
 
 				SelectObject(memDC, oldBitmap);
@@ -136,7 +140,8 @@ void GameWindow_EnterBattle(const BattleInit& message, uint32_t myPlayerId)
 	const int stageIdx = static_cast<int>(message.mapId) - 1;
 	if (stageIdx < 0 || stageIdx >= 3) return;
 
-	// 이전 전투의 구조물과 효과 비우기
+	// 이전 전투의 구조물, 병력, 효과 비우기
+	gameBattle.ClearUnits();
 	cannonCount[stageIdx] = 0;
 	mortarCount[stageIdx] = 0;
 	infernoCount[stageIdx] = 0;
@@ -191,4 +196,25 @@ void GameWindow_EnterBattle(const BattleInit& message, uint32_t myPlayerId)
 
 	gameState = static_cast<GameState>(STATE_STAGE1 + stageIdx);
 	if (mainWindow) InvalidateRect(mainWindow, NULL, FALSE);
+}
+
+void GameWindow_Invalidate()
+{
+	if (mainWindow) InvalidateRect(mainWindow, NULL, FALSE);
+}
+
+void GameWindow_ApplyUnitCreated(const UnitCreated& message)
+{
+	if (message.unitType > static_cast<uint8_t>(UnitType::Giant)) return;
+	const UnitType type = static_cast<UnitType>(message.unitType);
+
+	// 서버가 확정한 병종과 좌표로 화면에 그릴 병력을 만든다. 능력치는 병종별 기본값 사용
+	gameBattle.SpawnUnit(message.ownerId, type, static_cast<int>(message.x), static_cast<int>(message.y), GetUnitStats(type));
+	GameWindow_Invalidate();
+}
+
+void GameWindow_ApplyManaState(const ManaState& state)
+{
+	mana = state.mana;
+	GameWindow_Invalidate();
 }

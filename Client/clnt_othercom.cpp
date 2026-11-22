@@ -143,6 +143,24 @@ static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 			message.hp,
 			message.maxHp);
 
+		// 같은 파티 전체에 오는 생성 이벤트를 전투 화면의 병력으로 반영
+		GameWindow_ApplyUnitCreated(message);
+		break;
+	}
+
+	case MessageType::MANA_STATE: {
+		ManaState message;
+
+		if (!PacketCodec::Decode(packet, message)) {
+			printf("[오류] MANA_STATE 해석 실패\n");
+			return;
+		}
+
+		printf("[수신] MANA_STATE mana=%u/%u\n",
+			static_cast<unsigned>(message.mana),
+			static_cast<unsigned>(message.maxMana));
+
+		GameWindow_ApplyManaState(message);
 		break;
 	}
 
@@ -447,16 +465,17 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	// 로비 화면은 서버로 보내는 방법과 요청 번호 발급기를 받아 동작
-	LobbyScreen lobbyScreen(
-		[&client](const PacketCodec::Packet& packet) { return SendPacket(client, packet); },
-		[&player]() { return player.IssueRequestId(); });
+	// 로비 화면과 입력 처리는 서버로 보내는 방법과 요청 번호 발급기를 받아 동작
+	auto sendToServer = [&client](const PacketCodec::Packet& packet) { return SendPacket(client, packet); };
+	auto nextRequestId = [&player]() { return player.IssueRequestId(); };
+
+	LobbyScreen lobbyScreen(sendToServer, nextRequestId);
 	lobbyScreen.SetWindow(hWnd);
 	lobby = &lobbyScreen;
 	GameWindow_SetLobby(&lobbyScreen);
 
-	// 창의 클릭은 InputController가 받아 로비와 파티 UI로 분배
-	InputController inputController(lobbyScreen);
+	// 창의 클릭은 InputController가 받아 로비, 파티 UI, 전투 소환으로 분배
+	InputController inputController(lobbyScreen, sendToServer, nextRequestId);
 	GameWindow_SetInput(&inputController);
 
 	PacketBuffer packetBuffer;
