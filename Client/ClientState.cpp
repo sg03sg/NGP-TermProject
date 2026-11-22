@@ -1,4 +1,5 @@
 ﻿#include "ClientState.h"
+#include <algorithm>
 
 void ClientState::SetMyPlayerId(PlayerId id)
 {
@@ -8,6 +9,12 @@ void ClientState::SetMyPlayerId(PlayerId id)
 
 void ClientState::ApplyPartyState(const PartySnapshot& snap)
 {
+    // 내가 없는 명단은 이미 나간 파티의 늦게 도착한 상태이므로 무시
+    if (myPlayerId_ != 0 && !snap.members.empty()) {
+        const bool hasMe = std::any_of(snap.members.begin(), snap.members.end(), [this](const PartyMemberInfo& m) { return m.playerId == myPlayerId_; });
+        if (!hasMe) return;
+    }
+
     party_ = snap;
 
     // 로비/대기창 단계에서만 화면을 바꾼다.
@@ -22,6 +29,7 @@ void ClientState::ApplyLobbyState(const std::vector<LobbyMapInfo>& maps)
 
 void ClientState::Clear()
 {
+    // 로비 복귀: myPlayerId_와 lobbyMaps_는 유지
     party_ = PartySnapshot{};
     battle_ = BattleInit{};
     screen_ = ScreenState::Lobby;

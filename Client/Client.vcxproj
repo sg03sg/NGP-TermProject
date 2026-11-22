@@ -134,6 +134,8 @@
   <ItemGroup>
     <ClCompile Include="ClientState.cpp" />
     <ClCompile Include="clnt_othercom.cpp" />
+    <ClCompile Include="LobbyScreen.cpp" />
+    <ClCompile Include="MapUI.cpp" />
     <ClCompile Include="NetworkClient.cpp" />
     <ClCompile Include="EncodingUtil.cpp" />
     <ClCompile Include="..\PacketCodec.cpp" />
@@ -144,10 +146,14 @@
     <ClCompile Include="..\Renderer.cpp" />
     <ClCompile Include="..\Server\BattleInstance.cpp" />
     <ClCompile Include="..\Unit.cpp" />
+    <ClCompile Include="PartyUI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ClientState.h" />
     <ClInclude Include="common.h" />
+    <ClInclude Include="LobbyScreen.h" />
+    <ClInclude Include="LobbyUiCommon.h" />
+    <ClInclude Include="MapUI.h" />
     <ClInclude Include="NetworkClient.h" />
     <ClInclude Include="EncodingUtil.h" />
     <ClInclude Include="LocalPlayer.h" />
@@ -163,6 +169,7 @@
     <ClInclude Include="..\GameTypes.h" />
     <ClInclude Include="..\Unit.h" />
     <ClInclude Include="..\resource.h" />
+    <ClInclude Include="PartyUI.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\Resource.rc" />
