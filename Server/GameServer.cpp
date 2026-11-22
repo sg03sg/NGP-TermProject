@@ -1,14 +1,14 @@
-#include "GameServer.h"
+ï»¿#include "GameServer.h"
 #include "ClientSession.h"
 #include <iostream>
 
 #pragma comment(lib, "ws2_32.lib")
 
 namespace {
-    // ¿öÄ¿ ½º·¹µå°¡ ÇÑ Æ½¿¡ Ã³¸®ÇÏ´Â ÃÖ´ë ¿äÃ» ¼ö
+    // ì›Œì»¤ ìŠ¤ë ˆë“œê°€ í•œ í‹±ì— ì²˜ë¦¬í•˜ëŠ” ìµœëŒ€ ìš”ì²­ ìˆ˜
     constexpr int kMaxCommandsPerTick = 256;
 
-    // Å¬¶óÀÌ¾ğÆ®°¡ LOBBY_STATE(24)¸¦ Ã³¸®ÇÏ°Ô µÇ¸é true·Î ÀüÈ¯.
+    // í´ë¼ì´ì–¸íŠ¸ê°€ LOBBY_STATE(24)ë¥¼ ì²˜ë¦¬í•˜ê²Œ ë˜ë©´ trueë¡œ ì „í™˜.
     constexpr bool kEnableLobbyBroadcast = false;
 }
 
@@ -23,18 +23,18 @@ GameServer::~GameServer() {
 bool GameServer::Start(int port) {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "[GameServer] WSAStartup ½ÇÆĞ" << std::endl;
+        std::cerr << "[GameServer] WSAStartup ì‹¤íŒ¨" << std::endl;
         return false;
     }
 
     SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock == INVALID_SOCKET) {
-        std::cerr << "[GameServer] ¼ÒÄÏ »ı¼º ½ÇÆĞ: " << WSAGetLastError() << std::endl;
+        std::cerr << "[GameServer] ì†Œì¼“ ìƒì„± ì‹¤íŒ¨: " << WSAGetLastError() << std::endl;
         WSACleanup();
         return false;
     }
 
-    BOOL reuse = TRUE;   // Àç½ÃÀÛ ½Ã bind ½ÇÆĞ ¹æÁö
+    BOOL reuse = TRUE;   // ì¬ì‹œì‘ ì‹œ bind ì‹¤íŒ¨ ë°©ì§€
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse));
 
     SOCKADDR_IN serverAddr;
@@ -44,14 +44,14 @@ bool GameServer::Start(int port) {
     serverAddr.sin_port = htons(port);
 
     if (::bind(sock, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
-        std::cerr << "[GameServer] bind ½ÇÆĞ: " << WSAGetLastError() << std::endl;
+        std::cerr << "[GameServer] bind ì‹¤íŒ¨: " << WSAGetLastError() << std::endl;
         closesocket(sock);
         WSACleanup();
         return false;
     }
 
     if (listen(sock, SOMAXCONN) == SOCKET_ERROR) {
-        std::cerr << "[GameServer] listen ½ÇÆĞ: " << WSAGetLastError() << std::endl;
+        std::cerr << "[GameServer] listen ì‹¤íŒ¨: " << WSAGetLastError() << std::endl;
         closesocket(sock);
         WSACleanup();
         return false;
@@ -59,11 +59,11 @@ bool GameServer::Start(int port) {
 
     listenSocket_ = sock;
     running_ = true;
-    std::cout << "[GameServer] ·Îºñ ¹æ¼Û: " << (kEnableLobbyBroadcast ? "ÄÑÁü" : "²¨Áü") << std::endl;
+    std::cout << "[GameServer] ë¡œë¹„ ë°©ì†¡: " << (kEnableLobbyBroadcast ? "ì¼œì§" : "êº¼ì§") << std::endl;
     acceptThread_ = std::thread(&GameServer::AcceptLoop, this);
     workerThread_ = std::thread(&GameServer::WorkerLoop, this);
 
-    std::cout << "[GameServer] ¼ÒÄÏ ÃÊ±âÈ­ ¹× ½º·¹µå ±âµ¿ ¿Ï·á (Port: " << port << ")" << std::endl;
+    std::cout << "[GameServer] ì†Œì¼“ ì´ˆê¸°í™” ë° ìŠ¤ë ˆë“œ ê¸°ë™ ì™„ë£Œ (Port: " << port << ")" << std::endl;
     return true;
 }
 
@@ -76,8 +76,8 @@ void GameServer::AcceptLoop() {
         SOCKET clientSock = accept(listenSocket_, (SOCKADDR*)&clientAddr, &addrLen);
         if (clientSock == INVALID_SOCKET) {
             if (!running_) break;
-            std::cerr << "[GameServer] accept ¿¡·¯: " << WSAGetLastError() << std::endl;
-            // ¿¡·¯°¡ ¹İº¹µÅµµ CPU¸¦ ÅÂ¿ìÁö ¾Êµµ·Ï ´ë±â
+            std::cerr << "[GameServer] accept ì—ëŸ¬: " << WSAGetLastError() << std::endl;
+            // ì—ëŸ¬ê°€ ë°˜ë³µë¼ë„ CPUë¥¼ íƒœìš°ì§€ ì•Šë„ë¡ ëŒ€ê¸°
             if (++consecutiveErrors >= 5) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
@@ -85,10 +85,10 @@ void GameServer::AcceptLoop() {
         }
         consecutiveErrors = 0;
 
-        BOOL noDelay = TRUE;   // ÀÛÀº ÆĞÅ¶ Áö¿¬ ¹æÁö (Nagle off)
+        BOOL noDelay = TRUE;   // ì‘ì€ íŒ¨í‚· ì§€ì—° ë°©ì§€ (Nagle off)
         setsockopt(clientSock, IPPROTO_TCP, TCP_NODELAY, (const char*)&noDelay, sizeof(noDelay));
 
-        std::cout << "[GameServer] »õ Å¬¶óÀÌ¾ğÆ® Á¢¼Ó ¼ö¶ô. Socket: " << clientSock << std::endl;
+        std::cout << "[GameServer] ìƒˆ í´ë¼ì´ì–¸íŠ¸ ì ‘ì† ìˆ˜ë½. Socket: " << clientSock << std::endl;
         session_manager_.AddSession(clientSock, this);
     }
 }
@@ -107,14 +107,14 @@ bool GameServer::PushRequest(Command command) {
 
 void GameServer::WorkerLoop() {
     while (running_) {
-        // ¿äÃ» Å¥ Ã³¸®, ÇÑ Æ½¿¡ Ã³¸®ÇÏ´Â °³¼ö¸¦ Á¦ÇÑÇØ ¼¼¼Ç Á¤¸®¿Í ·Îºñ ¹æ¼ÛÀÌ ¹Ğ¸®Áö ¾Ê°Ô ÇÔ
+        // ìš”ì²­ í ì²˜ë¦¬, í•œ í‹±ì— ì²˜ë¦¬í•˜ëŠ” ê°œìˆ˜ë¥¼ ì œí•œí•´ ì„¸ì…˜ ì •ë¦¬ì™€ ë¡œë¹„ ë°©ì†¡ì´ ë°€ë¦¬ì§€ ì•Šê²Œ í•¨
         Command cmd;
         for (int i = 0; i < kMaxCommandsPerTick && requestQueue_.TryPop(cmd); ++i) {
             dispatcher_.Dispatch(cmd);
         }
-        session_manager_.ReapClosed();   // ²÷±ä ¼¼¼Ç Á¤¸®
+        session_manager_.ReapClosed();   // ëŠê¸´ ì„¸ì…˜ ì •ë¦¬
 
-        // PartyManager ¿¬°á ÈÄ ·Îºñ ¼¼¼Ç ¸ñ·Ï°ú ½ÇÁ¦ ÇöÈ²À¸·Î ±³Ã¼
+        // PartyManager ì—°ê²° í›„ ë¡œë¹„ ì„¸ì…˜ ëª©ë¡ê³¼ ì‹¤ì œ í˜„í™©ìœ¼ë¡œ êµì²´
 
         const uint64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
         if (kEnableLobbyBroadcast && lobbyBroadcaster_.ShouldSend(nowMs)) {
@@ -126,21 +126,38 @@ void GameServer::WorkerLoop() {
 }
 
 void GameServer::Stop() {
-    // exchange·Î Áßº¹ È£ÃâÀ» È®½ÇÈ÷ ¹æÁö
+    // exchangeë¡œ ì¤‘ë³µ í˜¸ì¶œì„ í™•ì‹¤íˆ ë°©ì§€
     if (!running_.exchange(false)) return;
 
-    // ¸®½¼ ¼ÒÄÏÀ» ´İ¾Æ accept¸¦ ±ú¿ò
+    // ë¦¬ìŠ¨ ì†Œì¼“ì„ ë‹«ì•„ acceptë¥¼ ê¹¨ì›€
     SOCKET s = listenSocket_.exchange(INVALID_SOCKET);
     if (s != INVALID_SOCKET) closesocket(s);
 
-    // accept ½º·¹µå¸¦ ¸ÕÀú join -> ÀÌÈÄ »õ ¼¼¼ÇÀÌ µî·ÏµÉ ¼ö ¾øÀ½
+    // accept ìŠ¤ë ˆë“œë¥¼ ë¨¼ì € join -> ì´í›„ ìƒˆ ì„¸ì…˜ì´ ë“±ë¡ë  ìˆ˜ ì—†ìŒ
     if (acceptThread_.joinable()) acceptThread_.join();
     if (workerThread_.joinable()) workerThread_.join();
 
-    // ¾ÈÀüÇÏ°Ô ¸ğµç ¼¼¼Ç Á¤¸®
+    battles_.clear(); 
+
+    // ì•ˆì „í•˜ê²Œ ëª¨ë“  ì„¸ì…˜ ì •ë¦¬
     session_manager_.Clear();
-    requestQueue_.Close();   // ¼¼¼ÇÀÌ ¸ğµÎ ³¡³­ µÚ Å¥ ´İ±â
+    requestQueue_.Close();   // ì„¸ì…˜ì´ ëª¨ë‘ ëë‚œ ë’¤ í ë‹«ê¸°
 
     WSACleanup();
-    std::cout << "[GameServer] ¼­¹ö°¡ ¼º°øÀûÀ¸·Î Á¾·áµÇ¾ú½À´Ï´Ù." << std::endl;
+    std::cout << "[GameServer] ì„œë²„ê°€ ì„±ê³µì ìœ¼ë¡œ ì¢…ë£Œë˜ì—ˆìŠµë‹ˆë‹¤." << std::endl;
+}
+
+BattleInstance* GameServer::FindBattle(PartyId partyId)
+{
+    auto it = battles_.find(partyId);
+    return it == battles_.end() ? nullptr : it->second.get();
+}
+
+bool GameServer::AddBattle(
+    PartyId partyId,
+    std::unique_ptr<BattleInstance> battle)
+{
+    if (!battle) return false;
+
+    return battles_.emplace(partyId, std::move(battle)).second;
 }

@@ -21,7 +21,8 @@ bool BattleInstance::Initialize(const MapData& mapData, const std::vector<Player
     ClearUnits();
     towers_.clear();
     vote_ = AbortVote{};
-    result_ = BattleResult{};
+    //result_ = BattleResult{};
+    result_ = BattleOutcome{};
     tick_ = 0;
     remainingMs_ = kBattleTimeLimitMs;
 
@@ -236,4 +237,51 @@ std::vector<BattleUnit>& BattleInstance::GetUnits()
 const std::vector<BattleUnit>& BattleInstance::GetUnits() const
 {
     return units;
+}
+
+BattleInit BattleInstance::BuildBattleInit() const
+{
+    BattleInit message;
+    message.partyId = partyId_;
+    message.mapId = mapDataId_;
+    message.remainingSeconds =
+        static_cast<uint16_t>(remainingMs_ / 1000);
+
+    for (const PlayerState& player : players_) {
+        message.players.push_back({
+            player.id,
+            player.mana,
+            player.maxMana
+            });
+    }
+
+    message.playerCount =
+        static_cast<uint8_t>(message.players.size());
+
+    // 이번 테스트에서는 type 0을 마을회관으로 사용한다.
+    StructureInitInfo townHall;
+    townHall.structureId = townHall_.id;
+    townHall.type = 0;
+    townHall.x = static_cast<uint32_t>(townHall_.pos.x);
+    townHall.y = static_cast<uint32_t>(townHall_.pos.y);
+    townHall.hp = townHall_.hp;
+    townHall.maxHp = townHall_.maxHp;
+    message.structures.push_back(townHall);
+
+    // type 1은 테스트용 방어타워.
+    for (const Tower& tower : towers_) {
+        StructureInitInfo structure;
+        structure.structureId = tower.id;
+        structure.type = 1;
+        structure.x = static_cast<uint32_t>(tower.pos.x);
+        structure.y = static_cast<uint32_t>(tower.pos.y);
+        structure.hp = tower.hp;
+        structure.maxHp = tower.maxHp;
+        message.structures.push_back(structure);
+    }
+
+    message.structureCount =
+        static_cast<uint16_t>(message.structures.size());
+
+    return message;
 }

@@ -1,21 +1,21 @@
-#include "CommandDispatcher.h"
+ï»¿#include "CommandDispatcher.h"
 #include "GameServer.h"
 #include "Protocol.h"
 #include <iostream>
 
 namespace {
-    // ÆĞÅ¶ Çì´õÀÇ messageType
+    // íŒ¨í‚· í—¤ë”ì˜ messageType
     uint16_t MessageTypeOf(const std::vector<uint8_t>& packet)
     {
         if (packet.size() < PACKET_HEADER_SIZE) return 0;
         return static_cast<uint16_t>((packet[4] << 8) | packet[5]);
     }
 
-    // Ã³¸® ÇÔ¼ö¸¦ ±¸ÇöÇÏ±â Àü±îÁö ¼ö½Å »ç½Ç¸¸ ·Î±×·Î ³²±è
+    // ì²˜ë¦¬ í•¨ìˆ˜ë¥¼ êµ¬í˜„í•˜ê¸° ì „ê¹Œì§€ ìˆ˜ì‹  ì‚¬ì‹¤ë§Œ ë¡œê·¸ë¡œ ë‚¨ê¹€
     void LogReceived(const Command& cmd, const char* name)
     {
-        std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": " << name
-            << " ¼ö½Å " << cmd.packet.size() << "¹ÙÀÌÆ®, Ã³¸® ÇÔ¼ö ¹Ì±¸Çö" << std::endl;
+        std::cout << "[CommandDispatcher] ì„¸ì…˜ " << cmd.sessionId << ": " << name
+            << " ìˆ˜ì‹  " << cmd.packet.size() << "ë°”ì´íŠ¸, ì²˜ë¦¬ í•¨ìˆ˜ ë¯¸êµ¬í˜„" << std::endl;
     }
 }
 
@@ -90,9 +90,9 @@ void CommandDispatcher::DispatchPacket(const Command& cmd)
     case MessageType::MARKER_REQUEST:   HandleMarkerRequest(cmd);   break;
 
     default:
-        // ¼­¹ö°¡ º¸³»´Â Á¾·ùÀÌ°Å³ª Á¤ÀÇµÇÁö ¾ÊÀº Á¾·ù
-        std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": Ã³¸®ÇÏÁö ¾Ê´Â ¸Ş½ÃÁö Á¾·ù "
-            << type << " " << cmd.packet.size() << "¹ÙÀÌÆ®" << std::endl;
+        // ì„œë²„ê°€ ë³´ë‚´ëŠ” ì¢…ë¥˜ì´ê±°ë‚˜ ì •ì˜ë˜ì§€ ì•Šì€ ì¢…ë¥˜
+        std::cout << "[CommandDispatcher] ì„¸ì…˜ " << cmd.sessionId << ": ì²˜ë¦¬í•˜ì§€ ì•ŠëŠ” ë©”ì‹œì§€ ì¢…ë¥˜ "
+            << type << " " << cmd.packet.size() << "ë°”ì´íŠ¸" << std::endl;
         break;
     }
 }
@@ -102,16 +102,16 @@ void CommandDispatcher::HandleHello(const Command& cmd)
     Hello hello;
     PacketHeader header;
     if (!PacketCodec::Decode(cmd.packet, hello, &header)) {
-        std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": HELLO µğÄÚµù ½ÇÆĞ" << std::endl;
+        std::cout << "[CommandDispatcher] ì„¸ì…˜ " << cmd.sessionId << ": HELLO ë””ì½”ë”© ì‹¤íŒ¨" << std::endl;
         return;
     }
-    if (PlayerOf(cmd.sessionId) != kInvalidPlayerId) return;   // Áßº¹ HELLO ¹«½Ã
+    if (PlayerOf(cmd.sessionId) != kInvalidPlayerId) return;   // ì¤‘ë³µ HELLO ë¬´ì‹œ
 
     const PlayerId pid = nextPlayerId_++;
     sessionToPlayer_[cmd.sessionId] = pid;
     playerToSession_[pid] = cmd.sessionId;
     players_[pid] = hello.name;
-    std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": HELLO \"" << hello.name << "\" -> ÇÃ·¹ÀÌ¾î " << pid << std::endl;
+    std::cout << "[CommandDispatcher] ì„¸ì…˜ " << cmd.sessionId << ": HELLO \"" << hello.name << "\" -> í”Œë ˆì´ì–´ " << pid << std::endl;
 
     Welcome welcome;
     welcome.playerId = pid;
@@ -122,29 +122,122 @@ void CommandDispatcher::HandleHello(const Command& cmd)
 void CommandDispatcher::HandleJoinMap(const Command& cmd)
 {
     const PlayerId pid = PlayerOf(cmd.sessionId);
-    if (pid == kInvalidPlayerId) { std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": HELLO Àü JOIN_MAP ¹«½Ã" << std::endl; return; }
+    if (pid == kInvalidPlayerId) { std::cout << "[CommandDispatcher] ì„¸ì…˜ " << cmd.sessionId << ": HELLO ì „ JOIN_MAP ë¬´ì‹œ" << std::endl; return; }
     partyHandler_.HandleJoinMap(cmd, pid);
 }
-void CommandDispatcher::HandleStartGame(const Command& cmd) { LogReceived(cmd, "START_GAME"); }
+
 void CommandDispatcher::HandleLeaveParty(const Command& cmd)
 {
     const PlayerId pid = PlayerOf(cmd.sessionId);
-    if (pid == kInvalidPlayerId) { std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": HELLO Àü LEAVE_PARTY ¹«½Ã" << std::endl; return; }
+    if (pid == kInvalidPlayerId) { std::cout << "[CommandDispatcher] ì„¸ì…˜ " << cmd.sessionId << ": HELLO ì „ LEAVE_PARTY ë¬´ì‹œ" << std::endl; return; }
     partyHandler_.HandleLeaveParty(cmd, pid);
 }
 void CommandDispatcher::HandleChatSend(const Command& cmd) { LogReceived(cmd, "CHAT_SEND"); }
-void CommandDispatcher::HandleSpawn(const Command& cmd) { LogReceived(cmd, "SPAWN_REQUEST"); }
+
+void CommandDispatcher::HandleSpawn(const Command& cmd) {
+    SpawnRequest request;
+    PacketHeader header;
+
+    if (!PacketCodec::Decode(cmd.packet, request, &header)) 
+    {
+        std::cout << "[SPAWN_REQUEST] Decode failed\n";
+        return;
+    }
+
+    auto reject = [&](ErrorCode error) {
+        RequestRejected message;
+
+        message.rejectedType =
+            static_cast<uint16_t>(MessageType::SPAWN_REQUEST);
+        message.errorCode = static_cast<uint16_t>(error);
+
+        SendToSession(cmd.sessionId, PacketCodec::Encode(message, header.requestId));
+        };
+
+    // ì†Œìœ ìëŠ” ìš”ì²­ ë³¸ë¬¸ì´ ì•„ë‹ˆë¼ ì ‘ì† ì„¸ì…˜ìœ¼ë¡œ í™•ì¸í•œë‹¤.
+    const PlayerId pid = PlayerOf(cmd.sessionId);
+    PartyManager& parties = server_.GetPartyManager();
+
+    if (pid == kInvalidPlayerId || !parties.IsInParty(pid)) 
+    {
+        reject(ErrorCode::NotInBattle);
+        return;
+    }
+
+    const PartyId partyId = parties.PartyOf(pid);
+    const Party* party = parties.GetParty(partyId);
+    BattleInstance* battle = server_.FindBattle(partyId);
+
+    if (!party || party->Status() != PartyStatus::Running || !battle)
+    {
+        reject(ErrorCode::NotInBattle);
+        return;
+    }
+
+    // íŒ¨í‚· ì¢Œí‘œëŠ” uint32_tì´ê³  Unit ì¢Œí‘œëŠ” intì´ë¯€ë¡œ ê°€ëŠ¥í•œ ë²”ìœ„ ê²€ì‚¬ 
+    if (request.x > static_cast<uint32_t>(INT_MAX) || request.y > static_cast<uint32_t>(INT_MAX))
+    {
+        reject(ErrorCode::InvalidPosition);
+        return;
+    }
+
+    Position position{
+        static_cast<int32_t>(request.x),
+        static_cast<int32_t>(request.y)
+    };
+
+    const Result result = battle->TrySpawnUnit(
+        pid,
+        static_cast<UnitType>(request.unitType),
+        position);
+
+    if (!result.success) {
+        reject(result.error);
+        return;
+    }
+
+    // ë³‘ì¢…ë³„ ì •ë ¬ ì‚½ì…ì´ë¯€ë¡œ ë°˜í™˜ëœ IDë¡œ ì¡°íšŒí•œë‹¤.
+    Unit* unit = battle->FindUnit(static_cast<int>(result.unitId));
+
+    if (!unit) 
+    {
+        std::cout << "[SPAWN_REQUEST] Created unit not found\n";
+        return;
+    }
+
+    UnitCreated created;
+    created.unitId = static_cast<uint32_t>(unit->GetId());
+    created.ownerId = pid;
+    created.unitType = static_cast<uint8_t>(unit->GetType());
+    created.x = static_cast<uint32_t>(unit->x);
+    created.y = static_cast<uint32_t>(unit->y);
+    created.hp = static_cast<uint32_t>(unit->GetHp());
+    created.maxHp = static_cast<uint32_t>(unit->GetMaxHp());
+
+    // ìƒì„± ì´ë²¤íŠ¸ëŠ” ìš”ì²­ìë¥¼ í¬í•¨í•œ ê°™ì€ íŒŒí‹° ì „ì²´ì— ì „ì†¡
+    // ê³µí†µ ì´ë²¤íŠ¸ì´ë¯€ë¡œ requestIdëŠ” 0ì„ ì‚¬ìš©í•œë‹¤.
+    SendToPlayers(party->Members(), PacketCodec::Encode(created, 0));
+
+    std::cout
+        << "[UNIT_CREATED] partyId=" << partyId
+        << " unitId=" << created.unitId
+        << " ownerId=" << created.ownerId
+        << " type=" << static_cast<unsigned>(created.unitType)
+        << " position=(" << created.x << ", " << created.y << ")"
+        << '\n';
+}
+
 void CommandDispatcher::HandleAbortVoteCast(const Command& cmd) { LogReceived(cmd, "ABORT_VOTE_CAST"); }
 void CommandDispatcher::HandleMarkerRequest(const Command& cmd)
 {
     MarkerRequest req;
     PacketHeader header;
     if (!PacketCodec::Decode(cmd.packet, req, &header)) {
-        std::cout << "[CommandDispatcher] ¼¼¼Ç " << cmd.sessionId << ": MARKER_REQUEST µğÄÚµù ½ÇÆĞ" << std::endl;
+        std::cout << "[CommandDispatcher] ì„¸ì…˜ " << cmd.sessionId << ": MARKER_REQUEST ë””ì½”ë”© ì‹¤íŒ¨" << std::endl;
         return;
     }
 
-    // HELLO ÀüÀÌ¸é ¼¼¼Ç ¹øÈ£¸¦ ¹ß½ÅÀÚ·Î ¾´´Ù (ÅëÇÕ Å×½ºÆ®¿ë)
+    // HELLO ì „ì´ë©´ ì„¸ì…˜ ë²ˆí˜¸ë¥¼ ë°œì‹ ìë¡œ ì“´ë‹¤ (í†µí•© í…ŒìŠ¤íŠ¸ìš©)
     const PlayerId pid = PlayerOf(cmd.sessionId);
     MarkerPlaced placed;
     placed.senderId = pid != kInvalidPlayerId ? pid : static_cast<uint32_t>(cmd.sessionId);
@@ -152,7 +245,7 @@ void CommandDispatcher::HandleMarkerRequest(const Command& cmd)
     placed.y = req.y;
     const PacketCodec::Packet packet = PacketCodec::Encode(placed, 0);
 
-    // ÆÄÆ¼°¡ ÀÖÀ¸¸é ÆÄÆ¼¿ø ÀüÃ¼, ¾øÀ¸¸é Á¢¼Ó ÁßÀÎ ¸ğµÎ¿¡°Ô º¸³½´Ù (º¸³½ »ç¶÷ Æ÷ÇÔ)
+    // íŒŒí‹°ê°€ ìˆìœ¼ë©´ íŒŒí‹°ì› ì „ì²´, ì—†ìœ¼ë©´ ì ‘ì† ì¤‘ì¸ ëª¨ë‘ì—ê²Œ ë³´ë‚¸ë‹¤ (ë³´ë‚¸ ì‚¬ëŒ í¬í•¨)
     PartyManager& parties = server_.GetPartyManager();
     if (pid != kInvalidPlayerId && parties.IsInParty(pid)) {
         SendToPlayers(parties.MembersOf(parties.PartyOf(pid)), packet);
@@ -162,15 +255,104 @@ void CommandDispatcher::HandleMarkerRequest(const Command& cmd)
     }
 }
 
+void CommandDispatcher::HandleStartGame(const Command& cmd)
+{
+    StartGame request;
+    PacketHeader header;
+
+    if (!PacketCodec::Decode(cmd.packet, request, &header)) {
+        std::cout << "[START_GAME] Decode failed\n";
+        return;
+    }
+
+    auto reject = [&](PartyError error) {
+        RequestRejected message;
+        message.rejectedType =
+            static_cast<uint16_t>(MessageType::START_GAME);
+        message.errorCode = static_cast<uint16_t>(error);
+
+        SendToSession(
+            cmd.sessionId,
+            PacketCodec::Encode(message, header.requestId));
+        };
+
+    const PlayerId pid = PlayerOf(cmd.sessionId);
+    PartyManager& parties = server_.GetPartyManager();
+
+    // í´ë¼ì´ì–¸íŠ¸ê°€ ë³´ë‚¸ partyIdë¥¼ ì„œë²„ ì†Œì† ì •ë³´ì™€ ë¹„êµí•œë‹¤.
+    if (pid == kInvalidPlayerId || !parties.IsInParty(pid) || parties.PartyOf(pid) != request.partyId) {
+        reject(PartyError::NotInParty);
+        return;
+    }
+
+    Party* party = parties.GetParty(request.partyId);
+    if (!party) {
+        reject(PartyError::NotInParty);
+        return;
+    }
+
+    if (party->Leader() != pid) {
+        reject(PartyError::NotLeader);
+        return;
+    }
+
+    if (!party->CanStart(pid) ||
+        server_.FindBattle(request.partyId) != nullptr) {
+        reject(PartyError::StageLocked);
+        return;
+    }
+
+    // í…ŒìŠ¤íŠ¸ìš© ë§µ: ì‹¤ì œ ë§µ ë°ì´í„° ë¡œë” ì—°ê²° ì „ ì„ì‹œ ë°ì´í„°.
+    MapData map;
+    map.id = party->GetMapId();
+    map.townHall.id = 1;
+    map.townHall.pos = Position{ 600, 300 };
+    map.townHall.hp = 1000;
+    map.townHall.maxHp = 1000;
+    map.townHall.destroyed = false;
+
+    auto battle = std::make_unique<BattleInstance>(party->Id());
+
+    if (!battle->Initialize(map, party->Members())) {
+        std::cout << "[START_GAME] Battle initialization failed\n";
+        reject(PartyError::InvalidStage);
+        return;
+    }
+
+    const BattleInit init = battle->BuildBattleInit();
+    const PacketCodec::Packet packet =
+        PacketCodec::Encode(init, header.requestId);
+
+    if (packet.empty()) {
+        std::cout << "[START_GAME] BATTLE_INIT encoding failed\n";
+        return;
+    }
+
+    if (!server_.AddBattle(party->Id(), std::move(battle))) {
+        reject(PartyError::StageLocked);
+        return;
+    }
+
+    // ì´ˆê¸°í™”ì™€ ë³´ê´€ì´ ëë‚œ ë’¤ ì‹œì‘ ìƒíƒœë¡œ ë³€ê²½í•œë‹¤.
+    party->SetStatus(PartyStatus::Running);
+    server_.GetLobbyBroadcaster().Invalidate();
+
+    SendToPlayers(party->Members(), packet);
+
+    std::cout << "[START_GAME] partyId=" << party->Id()
+        << " members=" << party->Size()
+        << " battle initialized\n";
+}
+
 void CommandDispatcher::HandleDisconnected(int sessionId)
 {
-    std::cout << "[CommandDispatcher] ¼¼¼Ç " << sessionId << ": ¿¬°á Á¾·á ÀÌº¥Æ® ¼ö½Å" << std::endl;
+    std::cout << "[CommandDispatcher] ì„¸ì…˜ " << sessionId << ": ì—°ê²° ì¢…ë£Œ ì´ë²¤íŠ¸ ìˆ˜ì‹ " << std::endl;
 
     auto it = sessionToPlayer_.find(sessionId);
-    if (it == sessionToPlayer_.end()) return;   // HELLO Àü¿¡ ²÷±è
+    if (it == sessionToPlayer_.end()) return;   // HELLO ì „ì— ëŠê¹€
     const PlayerId pid = it->second;
 
-    partyHandler_.HandlePlayerLeft(pid);        // ÆÄÆ¼¿¡¼­ Á¦°Å, ³²Àº ÆÄÆ¼¿ø¿¡°Ô PARTY_STATE
+    partyHandler_.HandlePlayerLeft(pid);        // íŒŒí‹°ì—ì„œ ì œê±°, ë‚¨ì€ íŒŒí‹°ì›ì—ê²Œ PARTY_STATE
     sessionToPlayer_.erase(it);
     playerToSession_.erase(pid);
     players_.erase(pid);

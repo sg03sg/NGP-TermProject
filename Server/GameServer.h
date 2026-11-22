@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <thread>
@@ -6,6 +6,8 @@
 #include <vector>
 #include <memory>
 #include <chrono>
+#include <map>
+#include "BattleInstance.h"
 #include "SessionManager.h"
 #include "ThreadSafeQueue.h"
 #include "LobbyBroadcaster.h"
@@ -15,11 +17,12 @@
 
 class GameServer {
 private:
-    std::atomic<SOCKET> listenSocket_;   // Stop()°ú AcceptLoopÀÇ µ¿½Ã Á¢±Ù ¹æÁö
+    std::atomic<SOCKET> listenSocket_;   // Stop()ê³¼ AcceptLoopì˜ ë™ì‹œ ì ‘ê·¼ ë°©ì§€
     std::atomic<bool> running_;
     ThreadSafeQueue<Command> requestQueue_;
     std::thread acceptThread_;
     std::thread workerThread_;
+    std::map<PartyId, std::unique_ptr<BattleInstance>> battles_;
 
     SessionManager session_manager_;
     PartyManager partyManager_;
@@ -41,5 +44,7 @@ public:
     LobbyBroadcaster& GetLobbyBroadcaster() { return lobbyBroadcaster_; }
     void RemoveSession(int sessionId);
     void BroadcastPacket(const char* data, int length);
-    bool PushRequest(Command command);   // ¿äÃ» Å¥¿¡ ¿äÃ» Ãß°¡, ¼¼¼Ç ½º·¹µå¿¡¼­ È£Ãâ
+    bool PushRequest(Command command);   // ìš”ì²­ íì— ìš”ì²­ ì¶”ê°€, ì„¸ì…˜ ìŠ¤ë ˆë“œì—ì„œ í˜¸ì¶œ
+    BattleInstance* FindBattle(PartyId partyId);
+    bool AddBattle(PartyId partyId, std::unique_ptr<BattleInstance> battle);
 };

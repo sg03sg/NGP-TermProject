@@ -2,6 +2,7 @@
 #include <vector>
 #include <cstdint>
 #include "Unit.h"
+#include "Message.h"
 
 class ClientSession;
 
@@ -13,7 +14,7 @@ using MapDataId = uint8_t;
 // ---- 전투 상수 ----
 constexpr uint32_t kBattleTimeLimitMs = 3 * 60 * 1000; // 제한 시간 3분
 constexpr uint16_t kMaxMana = 100;
-constexpr uint16_t kInitialMana = 0;
+constexpr uint16_t kInitialMana = 100;
 
 // ---- 열거형 ----
 enum class UnitAction : uint8_t { Move = 0, Attack = 1 };
@@ -73,9 +74,15 @@ struct AbortVote {              // vote_ : 중단 투표 진행 상태
     std::vector<PlayerId> continueVotes;
 };
 
-struct BattleResult {           // result_ : 파괴율과 별 개수
-    bool    finished = false;
-    uint8_t reason = 0;         // 0:진행중 1:전부 파괴 2:시간 종료 3:중단
+//struct BattleResult {           // result_ : 파괴율과 별 개수
+//    bool    finished = false;
+//    uint8_t reason = 0;         // 0:진행중 1:전부 파괴 2:시간 종료 3:중단
+//    uint8_t destructionPct = 0;
+//    uint8_t stars = 0;
+//};
+struct BattleOutcome {
+    bool finished = false;
+    uint8_t reason = 0;
     uint8_t destructionPct = 0;
     uint8_t stars = 0;
 };
@@ -110,7 +117,8 @@ private:
     AbortVote                vote_;             // 중단 투표 진행 상태
     uint32_t                 tick_ = 0;         // 경과 틱 수
     uint32_t                 remainingMs_ = 0;  // 남은 제한 시간
-    BattleResult             result_;           // 파괴율과 별 개수
+    //BattleResult             result_;           // 파괴율과 별 개수
+    BattleOutcome result_;
 
 public:
     explicit BattleInstance(PartyId partyId);
@@ -133,4 +141,5 @@ public:
     void ClearUnits(UnitType type);
     std::vector<BattleUnit>& GetUnits();
     const std::vector<BattleUnit>& GetUnits() const;
+    BattleInit BuildBattleInit() const;
 };
