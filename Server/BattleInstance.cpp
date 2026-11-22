@@ -285,3 +285,14 @@ BattleInit BattleInstance::BuildBattleInit() const
 
     return message;
 }
+
+const PlayerState* BattleInstance::FindPlayer(PlayerId pid) const
+{
+    for (const PlayerState& state : players_) {
+        if (state.id == pid) {
+            return &state;
+        }
+    }
+
+    return nullptr;
+}

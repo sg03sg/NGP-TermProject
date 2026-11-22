@@ -218,6 +218,15 @@ void CommandDispatcher::HandleSpawn(const Command& cmd) {
     // 공통 이벤트이므로 requestId는 0을 사용한다.
     SendToPlayers(party->Members(), PacketCodec::Encode(created, 0));
 
+    // 차감된 마나는 요청한 사람에게만 전송
+    const PlayerState* player = battle->FindPlayer(pid);
+    if (player != nullptr) {
+        ManaState mana;
+        mana.mana = player->mana;
+        mana.maxMana = player->maxMana;
+        SendToSession(cmd.sessionId, PacketCodec::Encode(mana, header.requestId));
+    }
+
     std::cout
         << "[UNIT_CREATED] partyId=" << partyId
         << " unitId=" << created.unitId

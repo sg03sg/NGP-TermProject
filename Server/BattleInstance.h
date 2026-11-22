@@ -142,4 +142,5 @@ public:
     std::vector<BattleUnit>& GetUnits();
     const std::vector<BattleUnit>& GetUnits() const;
     BattleInit BuildBattleInit() const;
+    const PlayerState* FindPlayer(PlayerId pid) const;
 };
