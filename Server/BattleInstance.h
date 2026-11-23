@@ -50,6 +50,8 @@ struct PlayerState {            // 개인 마나 등 상태
 struct BattleUnit {
     PlayerId ownerId;
     Unit unit;
+    double preciseX = static_cast<double>(unit.x);
+    double preciseY = static_cast<double>(unit.y);
 };
 
 struct Tower {                  // towers_ : 적 방어타워 사본
@@ -135,10 +137,11 @@ public:
     void CheckResult();                                                            // 종료 조건 판정
     void StartAbortVote(PlayerId leaverId);                                        // 20초 투표 시작
     void CastVote(PlayerId pid, bool stop);                                        // 한 표 기록
-    VoteOutcome TallyVote();                                                       // 과반 집계와 확정
-    Snapshot BuildBattleState() const;                                             // 병력·구조물 상태 복사
+    VoteOutcome TallyVote();     // 과반 집계와 확정
+    BattleState BuildBattleState() const;
+    //Snapshot BuildBattleState() const;                                             // 병력·구조물 상태 복사
     Snapshot BuildBattleProgress() const;                                          // 남은 시간·파괴율·별
-    Unit* SpawnUnit(uint32_t ownerId, UnitType type,int x, int y, const UnitStats& stats);
+    //Unit* SpawnUnit(uint32_t ownerId, UnitType type,int x, int y, const UnitStats& stats);
     Unit* FindUnit(int id);
     int CountUnits(UnitType type) const;
     void ClearUnits();

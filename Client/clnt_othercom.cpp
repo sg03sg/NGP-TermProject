@@ -164,6 +164,38 @@ static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 		break;
 	}
 
+	case MessageType::BATTLE_STATE: {
+		BattleState message;
+
+		if (!PacketCodec::Decode(packet, message)) {
+			printf("[오류] BATTLE_STATE 해석 실패\n");
+			return;
+		}
+
+		if (!lobby || lobby->State().Screen() != ScreenState::Battle ||	message.partyId != lobby->State().Battle().partyId) 
+		{
+			return;
+		}
+
+		printf(
+			"[수신] BATTLE_STATE partyId=%u tick=%u units=%zu\n",
+			message.partyId,
+			message.serverTick,
+			message.units.size());
+
+		for (const UnitStateInfo& unit : message.units) {
+			printf(
+				"  unitId=%u position=(%u, %u) hp=%u/%u\n",
+				unit.unitId,
+				unit.x,
+				unit.y,
+				unit.hp,
+				unit.maxHp);
+		}
+
+		break;
+	}
+
 	default:
 		printf("[수신] 처리하지 않는 메시지 종류 %u (%zu바이트)\n", type, packet.size());
 		break;

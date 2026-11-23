@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <climits>
 #include <iostream>
+#include <cmath>
+#include <limits>
 
 BattleInstance::BattleInstance(PartyId partyId) : partyId_(partyId)
 {
@@ -145,38 +147,38 @@ Result BattleInstance::TrySpawnUnit(
 
 // 기존 Unit.cpp에 있던 SpawnUnit,FindUnit,CountUnits,ClearUnits를 이동 완료
 
-Unit* BattleInstance::SpawnUnit(
-    uint32_t ownerId, UnitType type,
-    int x, int y, const UnitStats& stats)
-{
-    if (ownerId == 0 ||
-        type < UnitType::Barbarian ||
-        type > UnitType::Giant ||
-        nextUnitId > INT_MAX) {
-        return nullptr;
-    }
-
-    if (CountUnits(type) >= MAX_UNITS) {
-        return nullptr;
-    }
-
-    BattleUnit entry{
-        ownerId,
-        Unit(static_cast<int>(nextUnitId), type, x, y, stats)
-    };
-
-    auto position = units.begin();
-
-    while (position != units.end() &&
-        position->unit.GetType() <= type) {
-        ++position;
-    }
-
-    position = units.insert(position, entry);
-    ++nextUnitId;
-
-    return &position->unit;
-}
+//Unit* BattleInstance::SpawnUnit(
+//    uint32_t ownerId, UnitType type,
+//    int x, int y, const UnitStats& stats)
+//{
+//    if (ownerId == 0 ||
+//        type < UnitType::Barbarian ||
+//        type > UnitType::Giant ||
+//        nextUnitId > INT_MAX) {
+//        return nullptr;
+//    }
+//
+//    if (CountUnits(type) >= MAX_UNITS) {
+//        return nullptr;
+//    }
+//
+//    BattleUnit entry{
+//        ownerId,
+//        Unit(static_cast<int>(nextUnitId), type, x, y, stats)
+//    };
+//
+//    auto position = units.begin();
+//
+//    while (position != units.end() &&
+//        position->unit.GetType() <= type) {
+//        ++position;
+//    }
+//
+//    position = units.insert(position, entry);
+//    ++nextUnitId;
+//
+//    return &position->unit;
+//}
 
 Unit* BattleInstance::FindUnit(int id)
 {
@@ -295,4 +297,174 @@ const PlayerState* BattleInstance::FindPlayer(PlayerId pid) const
     }
 
     return nullptr;
+}
+
+void BattleInstance::Update(uint32_t dtMs)
+{
+    if (dtMs == 0 || result_.finished || players_.empty()) {
+        return;
+    }
+
+    const double dtSeconds =
+        static_cast<double>(dtMs) / 1000.0;
+
+    // 기존 이동 로직은 200ms마다 speed만큼 이동했다.
+    constexpr double oldUpdateSeconds = 0.2;
+
+    for (BattleUnit& entry : units) 
+    {
+        Unit& unit = entry.unit;
+
+        if (unit.IsDead()) { continue; }
+
+        bool foundTarget = false;
+
+        int targetX = 0;
+        int targetY = 0;
+        int targetIndex = -1;
+
+        double nearestDistance =
+            std::numeric_limits<double>::infinity();
+
+        // 후보 구조물 중 가장 가까운 곳을 선택한다.
+        auto considerTarget = [&](const Position& position, int index)
+            {
+                const double dx =
+                    static_cast<double>(position.x) - entry.preciseX;
+
+                const double dy =
+                    static_cast<double>(position.y) - entry.preciseY;
+
+                const double distance = std::hypot(dx, dy);
+
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+
+                    targetX = position.x;
+                    targetY = position.y;
+                    targetIndex = index;
+
+                    foundTarget = true;
+                }
+            };
+
+        // 방어타워 후보
+        for (size_t i = 0; i < towers_.size(); ++i) 
+        {
+            const Tower& tower = towers_[i];
+
+            if (tower.destroyed || tower.hp == 0) { continue; }
+
+            considerTarget(tower.pos, static_cast<int>(i));
+        }
+
+        // 마을회관 후보
+        if (!townHall_.destroyed && townHall_.hp > 0) 
+        {
+            considerTarget(townHall_.pos, -1);
+        }
+
+        if (!foundTarget) 
+        {
+            unit.hasTarget = FALSE;
+            continue;
+        }
+
+        unit.SetTarget(targetX, targetY, targetIndex);
+
+        const double attackRange =
+            unit.range > 0 ? static_cast<double>(unit.range) : 0.0;
+
+        // 사거리 안이면 이동을 멈춘다.
+        // 공격 처리는 다음 단계에서 여기에 연결한다.
+        if (nearestDistance <= attackRange) 
+        {
+            continue;
+        }
+
+        if (unit.speed <= 0)
+        {
+            continue;
+        }
+
+        const double dx = static_cast<double>(targetX) - entry.preciseX;
+
+        const double dy = static_cast<double>(targetY) - entry.preciseY;
+
+        // 기존 speed를 초당 이동 속도로 환산
+        const double pixelsPerSecond = static_cast<double>(unit.speed) / oldUpdateSeconds;
+
+        const double possibleMovement = pixelsPerSecond * dtSeconds;
+
+        // 목표의 사거리 경계를 넘어가지 않도록 이동량 제한
+        const double distanceToRange = nearestDistance - attackRange;
+
+        const double movement = possibleMovement < distanceToRange ? possibleMovement : distanceToRange;
+
+        // 방향을 정규화한 뒤 이동량을 곱한다.
+        entry.preciseX += dx / nearestDistance * movement;
+        entry.preciseY += dy / nearestDistance * movement;
+
+        // 현재 Unit과 패킷은 정수 좌표를 사용한다.
+        unit.x = static_cast<int>(std::lround(entry.preciseX));
+        unit.y = static_cast<int>(std::lround(entry.preciseY));
+    }
+
+    ++tick_;
+}
+
+BattleState BattleInstance::BuildBattleState() const
+{
+    BattleState message;
+
+    message.partyId = partyId_;
+    message.serverTick = tick_;
+
+    for (const BattleUnit& entry : units) {
+        const Unit& unit = entry.unit;
+
+        if (unit.IsDead()) {
+            continue;
+        }
+
+        UnitStateInfo state;
+        state.unitId = static_cast<uint32_t>(unit.GetId());
+        state.ownerId = entry.ownerId;
+        state.unitType = static_cast<uint8_t>(unit.GetType());
+        state.x = static_cast<uint32_t>(unit.x);
+        state.y = static_cast<uint32_t>(unit.y);
+        state.hp = static_cast<uint32_t>(unit.GetHp());
+        state.maxHp = static_cast<uint32_t>(unit.GetMaxHp());
+
+        // 현재는 이동만 구현된 단계.
+        // 공격 상태 반영은 공격 처리 구현 시 연결한다.
+        state.action = static_cast<uint8_t>(UnitAction::Move);
+
+        message.units.push_back(state);
+    }
+
+    message.unitCount =
+        static_cast<uint16_t>(message.units.size());
+
+    // 마을회관 상태
+    StructureStateInfo townHall;
+    townHall.structureId = townHall_.id;
+    townHall.hp = townHall_.hp;
+    townHall.maxHp = townHall_.maxHp;
+    message.structures.push_back(townHall);
+
+    // 방어타워 상태
+    for (const Tower& tower : towers_) {
+        StructureStateInfo state;
+        state.structureId = tower.id;
+        state.hp = tower.hp;
+        state.maxHp = tower.maxHp;
+
+        message.structures.push_back(state);
+    }
+
+    message.structureCount =
+        static_cast<uint16_t>(message.structures.size());
+
+    return message;
 }

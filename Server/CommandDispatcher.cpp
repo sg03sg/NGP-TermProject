@@ -58,6 +58,27 @@ void CommandDispatcher::SendToPlayers(const std::vector<PlayerId>& pids, const P
     SendToSessions(ids, packet);
 }
 
+void CommandDispatcher::SendBattleState(const BattleState& message)
+{
+    const Party* party = server_.GetPartyManager().GetParty(message.partyId);
+
+    if (!party || party->Status() != PartyStatus::Running) 
+    {
+        return;
+    }
+
+    const PacketCodec::Packet packet = PacketCodec::Encode(message, 0);
+
+    if (packet.empty()) 
+    {
+        std::cout << "[BATTLE_STATE] Encode failed\n";
+        return;
+    }
+
+    // 전체 접속자가 아니라 해당 파티원에게만 전송
+    SendToPlayers(party->Members(), packet);
+}
+
 PlayerId CommandDispatcher::PlayerOf(int sessionId) const
 {
     auto it = sessionToPlayer_.find(sessionId);

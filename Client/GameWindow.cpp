@@ -5,6 +5,8 @@
 #include "LobbyScreen.h"
 #include "InputController.h"
 #include "LobbyUiCommon.h"
+#include <climits>
+#include <cstdio>
 
 namespace {
 	const TCHAR* WINDOW_CLASS = TEXT("ClientGameWindow");
@@ -205,11 +207,46 @@ void GameWindow_Invalidate()
 
 void GameWindow_ApplyUnitCreated(const UnitCreated& message)
 {
-	if (message.unitType > static_cast<uint8_t>(UnitType::Giant)) return;
-	const UnitType type = static_cast<UnitType>(message.unitType);
+	// 패킷의 ID, 좌표, HP는 uint32_t이고 Unit은 int로 저장한다.
+	if (message.unitId == 0 || message.unitId > INT_MAX ||
+		message.ownerId == 0 ||
+		message.unitType > static_cast<uint8_t>(UnitType::Giant) ||
+		message.x > INT_MAX || message.y > INT_MAX ||
+		message.maxHp == 0 || message.maxHp > INT_MAX ||
+		message.hp > message.maxHp) {
+		return;
+	}
 
-	// 서버가 확정한 병종과 좌표로 화면에 그릴 병력을 만든다. 능력치는 병종별 기본값 사용
-	gameBattle.SpawnUnit(message.ownerId, type, static_cast<int>(message.x), static_cast<int>(message.y), GetUnitStats(type));
+	const int unitId = static_cast<int>(message.unitId);
+	if (gameBattle.FindUnit(unitId) != nullptr) {
+		return;
+	}
+
+	const UnitType type = static_cast<UnitType>(message.unitType);
+	UnitStats stats = GetUnitStats(type);
+	stats.maxHp = static_cast<int>(message.maxHp);
+
+	BattleUnit entry{
+		message.ownerId,
+		Unit(unitId, type,
+			 static_cast<int>(message.x),
+			 static_cast<int>(message.y),
+			 stats)
+	};
+
+	// Unit 생성자는 현재 HP를 최대 HP로 초기화한다.
+	entry.unit.TakeDamage(static_cast<int>(message.maxHp - message.hp));
+
+	// 기존 화면 목록의 병종별 순서와 같은 병종 내 소환 순서를 유지한다.
+	auto& units = gameBattle.GetUnits();
+	auto position = units.begin();
+	while (position != units.end() && position->unit.GetType() <= type) 
+	{
+		++position;
+	}
+
+	const auto inserted = units.insert(position, entry);
+	std::printf("[화면 병력 등록] 서버 ID=%u 저장 ID=%d 좌표=(%d, %d)\n", message.unitId, inserted->unit.GetId(), inserted->unit.x, inserted->unit.y);
 	GameWindow_Invalidate();
 }
 
