@@ -24,6 +24,7 @@ public:
     bool OnStartClicked();                              // 시작 요청 전송, 방장만
     bool OnLeaveClicked();                              // 퇴장 요청 전송
 
+    static RECT PanelRect();                                  // 파티 창 이미지의 화면 좌표, 채팅창 배치의 기준
     static RECT StartButtonRect();                            // 시작 버튼의 화면 좌표, 클릭 판별은 InputController가 사용
     static RECT LeaveButtonRect();                            // 나가기 버튼의 화면 좌표
     void OnLeaveApproved();                                   // 퇴장 승인 수신

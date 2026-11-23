@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string>
 
+#pragma comment(lib, "msimg32.lib")
+
 constexpr int kScreenWidth = 1280;
 constexpr int kScreenHeight = 940;
 
@@ -55,4 +57,27 @@ inline void DrawBox(HDC hdc, const RECT& area, COLORREF fill, COLORREF border)
     HBRUSH borderBrush = CreateSolidBrush(border);
     FrameRect(hdc, &area, borderBrush);
     DeleteObject(borderBrush);
+}
+
+// 마젠타를 투명색으로 쓰는 BMP 리소스 도우미
+constexpr COLORREF kTransparentColor = RGB(255, 0, 255);
+
+inline HBITMAP LoadResourceBitmap(int resourceId)
+{
+    return (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(resourceId), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+}
+
+// 마젠타를 투명색으로 두고 이미지를 화면 좌표에 그림
+inline void DrawTransparentBitmap(HDC hdc, HBITMAP bitmap, int x, int y)
+{
+    if (bitmap == nullptr) return;
+
+    BITMAP info;
+    GetObject(bitmap, sizeof(info), &info);
+
+    HDC memDC = CreateCompatibleDC(hdc);
+    HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, bitmap);
+    TransparentBlt(hdc, x, y, info.bmWidth, info.bmHeight, memDC, 0, 0, info.bmWidth, info.bmHeight, kTransparentColor);
+    SelectObject(memDC, oldBitmap);
+    DeleteDC(memDC);
 }

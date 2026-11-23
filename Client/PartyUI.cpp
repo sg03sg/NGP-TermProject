@@ -2,8 +2,6 @@
 #include "LobbyUiCommon.h"
 #include "../resource.h"
 
-#pragma comment(lib, "msimg32.lib")
-
 namespace {
     // 파티 창 이미지 크기와 화면 중앙 배치
     constexpr int kPanelWidth = 480;
@@ -29,28 +27,6 @@ namespace {
     constexpr int kLeaveLeft = 280;
     constexpr int kStartOffMargin = 4;   // 회색 버튼 이미지가 시작 버튼보다 사방으로 더 크게 덮는 폭
 
-    constexpr COLORREF kTransparentColor = RGB(255, 0, 255);
-
-    HBITMAP LoadResourceBitmap(int resourceId)
-    {
-        return (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(resourceId), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
-    }
-
-    // 마젠타를 투명색으로 두고 이미지를 화면 좌표에 그림
-    void DrawTransparentBitmap(HDC hdc, HBITMAP bitmap, int x, int y)
-    {
-        if (bitmap == nullptr) return;
-
-        BITMAP info;
-        GetObject(bitmap, sizeof(info), &info);
-
-        HDC memDC = CreateCompatibleDC(hdc);
-        HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, bitmap);
-        TransparentBlt(hdc, x, y, info.bmWidth, info.bmHeight, memDC, 0, 0, info.bmWidth, info.bmHeight, kTransparentColor);
-        SelectObject(memDC, oldBitmap);
-        DeleteDC(memDC);
-    }
-
     RECT ScreenRect(int left, int top, int width, int height)
     {
         return RECT{ kPanelLeft + left, kPanelTop + top, kPanelLeft + left + width, kPanelTop + top + height };
@@ -74,6 +50,7 @@ void PartyUI::LoadBitmaps()
     if (startOffBitmap_ == nullptr) startOffBitmap_ = LoadResourceBitmap(IDB_PARTY_START_OFF);
 }
 
+RECT PartyUI::PanelRect() { return RECT{ kPanelLeft, kPanelTop, kPanelLeft + kPanelWidth, kPanelTop + kPanelHeight }; }
 RECT PartyUI::StartButtonRect() { return ScreenRect(kStartLeft, kButtonTop, kButtonWidth, kButtonHeight); }
 RECT PartyUI::LeaveButtonRect() { return ScreenRect(kLeaveLeft, kButtonTop, kButtonWidth, kButtonHeight); }
 
