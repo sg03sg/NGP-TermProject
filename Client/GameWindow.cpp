@@ -4,7 +4,11 @@
 #include "../RendererGlobals.h"
 #include "LobbyScreen.h"
 #include "InputController.h"
+#include "ChatUI.h"
 #include "LobbyUiCommon.h"
+#include <imm.h>
+
+#pragma comment(lib, "imm32.lib")
 
 namespace {
 	const TCHAR* WINDOW_CLASS = TEXT("ClientGameWindow");
@@ -15,7 +19,21 @@ namespace {
 
 	HWND mainWindow = NULL;
 	LobbyScreen* lobby = nullptr;
+	ChatUI* chat = nullptr;
 	InputController* input = nullptr;
+
+	// IME가 만든 문자열 중 flag에 해당하는 부분을 읽음, lParam에 해당 flag가 없으면 빈 문자열
+	std::wstring ReadImeString(HIMC context, DWORD flag, LPARAM lParam)
+	{
+		if (!(lParam & flag)) return std::wstring();
+
+		const LONG bytes = ImmGetCompositionStringW(context, flag, NULL, 0);
+		if (bytes <= 0) return std::wstring();
+
+		std::wstring text(bytes / sizeof(wchar_t), L'\0');
+		ImmGetCompositionStringW(context, flag, &text[0], bytes);
+		return text;
+	}
 
 	LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
@@ -27,6 +45,38 @@ namespace {
 		case WM_LBUTTONDOWN:
 			// 클릭 위치 판별과 화면별 분배는 InputController가 담당
 			if (input != nullptr) input->OnLButtonDown(LOWORD(lParam), HIWORD(lParam));
+			return 0;
+
+		case WM_KEYDOWN:
+			// 방향키처럼 글자가 아닌 키는 InputController가 채팅창으로 전달
+			if (input != nullptr) input->OnKeyDown(wParam);
+			break;
+
+		case WM_IME_STARTCOMPOSITION:
+			// IME의 기본 조합창은 띄우지 않고 조합 중인 글자를 채팅 입력칸에 직접 표시
+			return 0;
+
+		case WM_IME_COMPOSITION: {
+			// 한글은 마지막 글자가 확정되기 전까지 WM_CHAR로 오지 않으므로 확정된 글자와 조합 중인 글자를 직접 읽음
+			std::wstring result;
+			std::wstring composing;
+			HIMC context = ImmGetContext(hWnd);
+			if (context != NULL) {
+				result = ReadImeString(context, GCS_RESULTSTR, lParam);
+				composing = ReadImeString(context, GCS_COMPSTR, lParam);
+				ImmReleaseContext(hWnd, context);
+			}
+			if (input != nullptr) input->OnImeComposition(result, composing);
+			return 0;
+		}
+
+		case WM_IME_ENDCOMPOSITION:
+			if (input != nullptr) input->OnImeComposition(std::wstring(), std::wstring());
+			return 0;
+
+		case WM_CHAR:
+			// 키보드 글자 입력도 InputController를 거쳐 채팅창으로 전달
+			if (input != nullptr) input->OnChar(static_cast<wchar_t>(wParam));
 			return 0;
 
 		case WM_PAINT: {
@@ -43,7 +93,11 @@ namespace {
 				HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, backBuffer);
 
 				Renderer_Paint(hWnd, memDC);
-				if (menuOverlay) lobby->PaintOverlay(memDC);
+				if (menuOverlay) {
+					lobby->PaintOverlay(memDC);
+					// 파티 대기창이 떠 있을 때만 채팅 아이콘과 채팅창 표시, 메시지 목록은 서버 채팅 방송 구현 후 연결
+					if (chat != nullptr && lobby->IsPartyVisible()) chat->Draw(memDC, std::vector<ChatMessage>());
+				}
 				if (battleOverlay) input->PaintOverlay(memDC);
 				BitBlt(hDC, 0, 0, kScreenWidth, kScreenHeight, memDC, 0, 0, SRCCOPY);
 
@@ -128,6 +182,11 @@ void GameWindow_OnTimer(int timerId)
 void GameWindow_SetLobby(LobbyScreen* lobbyScreen)
 {
 	lobby = lobbyScreen;
+}
+
+void GameWindow_SetChat(ChatUI* chatUI)
+{
+	chat = chatUI;
 }
 
 void GameWindow_SetInput(InputController* inputController)

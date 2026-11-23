@@ -148,6 +148,7 @@
     <ClCompile Include="..\Unit.cpp" />
     <ClCompile Include="PartyUI.cpp" />
     <ClCompile Include="InputController.cpp" />
+    <ClCompile Include="ChatUI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ClientState.h" />
@@ -172,6 +173,7 @@
     <ClInclude Include="..\resource.h" />
     <ClInclude Include="PartyUI.h" />
     <ClInclude Include="InputController.h" />
+    <ClInclude Include="ChatUI.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\Resource.rc" />

@@ -1,0 +1,257 @@
+﻿#include "ChatUI.h"
+#include "GameWindow.h"
+#include "LobbyUiCommon.h"
+#include "PartyUI.h"
+#include "../resource.h"
+#include <cstdio>
+
+namespace {
+    // 채팅 아이콘과 채팅창 이미지 크기
+    constexpr int kIconWidth = 64;
+    constexpr int kIconHeight = 60;
+    constexpr int kIconGap = 8;           // 파티 창 아래쪽과 아이콘 사이
+    constexpr int kWindowWidth = 360;
+    constexpr int kWindowHeight = 480;
+    constexpr int kWindowGap = 10;        // 파티 창과 채팅창 사이
+
+    // 채팅창 이미지 안쪽의 입력 영역
+    constexpr int kInputLeft = 20;
+    constexpr int kInputTop = 414;
+    constexpr int kInputWidth = 320;
+    constexpr int kInputHeight = 44;
+    constexpr int kInputPadding = 8;
+
+    constexpr size_t kMaxDraftLength = 100;   // 한 번에 보낼 수 있는 글자 수
+
+    bool IsHighSurrogate(wchar_t ch) { return ch >= 0xD800 && ch <= 0xDBFF; }
+    bool IsLowSurrogate(wchar_t ch) { return ch >= 0xDC00 && ch <= 0xDFFF; }
+
+    std::string WideToUtf8(const std::wstring& text)
+    {
+        if (text.empty()) return std::string();
+        const int length = WideCharToMultiByte(CP_UTF8, 0, text.data(), (int)text.size(), nullptr, 0, nullptr, nullptr);
+        if (length <= 0) return std::string();
+        std::string utf8(length, '\0');
+        WideCharToMultiByte(CP_UTF8, 0, text.data(), (int)text.size(), &utf8[0], length, nullptr, nullptr);
+        return utf8;
+    }
+
+    // 콘솔에 보여주기 위해 시스템 코드 페이지 문자열로 바꿈
+    std::string WideToConsole(const std::wstring& text)
+    {
+        if (text.empty()) return std::string();
+        const int length = WideCharToMultiByte(CP_ACP, 0, text.data(), (int)text.size(), nullptr, 0, nullptr, nullptr);
+        if (length <= 0) return std::string();
+        std::string ansi(length, '\0');
+        WideCharToMultiByte(CP_ACP, 0, text.data(), (int)text.size(), &ansi[0], length, nullptr, nullptr);
+        return ansi;
+    }
+
+    // 입력 중인 문장을 한 줄로 표시, 앞쪽 글자 + 조합 중인 글자 + 뒤쪽 글자 순서로 이어 그림
+    // 조합 중인 글자에는 밑줄, 커서 위치에는 세로선, 커서가 영역 밖이면 보이도록 글자를 왼쪽으로 밀어서 표시
+    void DrawDraft(HDC hdc, const RECT& area, const std::wstring& before, const std::wstring& composing, const std::wstring& after)
+    {
+        HFONT font = CreateFontW(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"맑은 고딕");
+        HFONT oldFont = (HFONT)SelectObject(hdc, font);
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, RGB(255, 255, 255));
+
+        TEXTMETRICW metric;
+        GetTextMetricsW(hdc, &metric);
+
+        auto widthOf = [hdc](const std::wstring& text) {
+            SIZE size = { 0, 0 };
+            if (!text.empty()) GetTextExtentPoint32W(hdc, text.c_str(), (int)text.size(), &size);
+            return (int)size.cx;
+        };
+
+        const int beforeWidth = widthOf(before);
+        const int composingWidth = widthOf(composing);
+        const int caretOffset = beforeWidth + composingWidth;
+
+        const int visibleWidth = (area.right - area.left) - 2;
+        const int scroll = caretOffset > visibleWidth ? caretOffset - visibleWidth : 0;
+        const int left = area.left - scroll;
+        const int top = area.top + ((area.bottom - area.top) - metric.tmHeight) / 2;
+
+        const int saved = SaveDC(hdc);
+        IntersectClipRect(hdc, area.left, area.top, area.right, area.bottom);
+
+        TextOutW(hdc, left, top, before.c_str(), (int)before.size());
+        TextOutW(hdc, left + beforeWidth, top, composing.c_str(), (int)composing.size());
+        TextOutW(hdc, left + caretOffset, top, after.c_str(), (int)after.size());
+
+        HPEN pen = CreatePen(PS_SOLID, 1, RGB(255, 255, 255));
+        SelectObject(hdc, pen);
+
+        if (!composing.empty()) {
+            const int underline = top + metric.tmHeight - 1;
+            MoveToEx(hdc, left + beforeWidth, underline, nullptr);
+            LineTo(hdc, left + caretOffset, underline);
+        }
+
+        MoveToEx(hdc, left + caretOffset, top, nullptr);
+        LineTo(hdc, left + caretOffset, top + metric.tmHeight);
+
+        RestoreDC(hdc, saved);
+        DeleteObject(pen);
+        SelectObject(hdc, oldFont);
+        DeleteObject(font);
+    }
+}
+
+ChatUI::ChatUI(const ClientState& state, SendFn send, RequestIdFn nextRequestId) : state_(state), send_(std::move(send)), nextRequestId_(std::move(nextRequestId))
+{
+
+}
+
+ChatUI::~ChatUI()
+{
+    if (iconBitmap_) DeleteObject(iconBitmap_);
+    if (windowBitmap_) DeleteObject(windowBitmap_);
+    if (bubbleBitmap_) DeleteObject(bubbleBitmap_);
+}
+
+void ChatUI::LoadBitmaps()
+{
+    if (iconBitmap_ == nullptr)   iconBitmap_ = LoadResourceBitmap(IDB_CHAT_ICON);
+    if (windowBitmap_ == nullptr) windowBitmap_ = LoadResourceBitmap(IDB_CHAT_WINDOW);
+    if (bubbleBitmap_ == nullptr) bubbleBitmap_ = LoadResourceBitmap(IDB_CHAT_BUBBLE);
+}
+
+RECT ChatUI::ToggleButtonRect()
+{
+    // 파티 창의 오른쪽 아래 모서리 바로 밑, 채팅창이 열려도 가려지지 않는 자리
+    const RECT party = PartyUI::PanelRect();
+    return RECT{ party.right - kIconWidth, party.bottom + kIconGap, party.right, party.bottom + kIconGap + kIconHeight };
+}
+
+RECT ChatUI::WindowRect()
+{
+    // 파티 창을 가리지 않도록 파티 창의 오른쪽에 같은 높이로 배치
+    const RECT party = PartyUI::PanelRect();
+    return RECT{ party.right + kWindowGap, party.top, party.right + kWindowGap + kWindowWidth, party.top + kWindowHeight };
+}
+
+void ChatUI::Toggle()
+{
+    open_ = !open_;
+    composing_.clear();
+    GameWindow_Invalidate();
+}
+
+void ChatUI::InsertAtCaret(const std::wstring& text)
+{
+    if (draft_.size() >= kMaxDraftLength) return;
+
+    const std::wstring part = text.substr(0, kMaxDraftLength - draft_.size());
+    draft_.insert(caret_, part);
+    caret_ += part.size();
+}
+
+void ChatUI::OnChar(wchar_t ch)
+{
+    if (!open_) return;
+
+    if (ch == L'\b') {
+        if (caret_ == 0) return;
+
+        // 이모지처럼 두 글자 단위로 저장된 문자는 함께 지움
+        size_t count = 1;
+        if (caret_ >= 2 && IsLowSurrogate(draft_[caret_ - 1]) && IsHighSurrogate(draft_[caret_ - 2])) count = 2;
+
+        draft_.erase(caret_ - count, count);
+        caret_ -= count;
+    }
+    else if (ch >= 0x20 && ch != 0x7F) {
+        InsertAtCaret(std::wstring(1, ch));
+    }
+    else {
+        return;   // Enter, Tab 같은 제어 문자는 여기서 처리하지 않음
+    }
+
+    GameWindow_Invalidate();
+}
+
+void ChatUI::OnComposition(const std::wstring& result, const std::wstring& composing)
+{
+    if (!open_) return;
+
+    // 확정된 글자는 커서 위치에 넣고, 조합 중인 글자는 확정될 때까지 따로 보관
+    if (!result.empty()) InsertAtCaret(result);
+    composing_ = composing;
+
+    GameWindow_Invalidate();
+}
+
+void ChatUI::OnKeyDown(WPARAM key)
+{
+    if (!open_) return;
+
+    // 한글 조합 중에는 IME가 먼저 글자를 확정하므로 이동하지 않음
+    if (!composing_.empty()) return;
+
+    if (key == VK_LEFT && caret_ > 0) {
+        --caret_;
+        if (caret_ > 0 && IsLowSurrogate(draft_[caret_]) && IsHighSurrogate(draft_[caret_ - 1])) --caret_;
+    }
+    else if (key == VK_RIGHT && caret_ < draft_.size()) {
+        if (IsHighSurrogate(draft_[caret_]) && caret_ + 1 < draft_.size()) ++caret_;
+        ++caret_;
+    }
+    else {
+        return;
+    }
+
+    GameWindow_Invalidate();
+}
+
+bool ChatUI::OnEnterKey()
+{
+    if (!open_ || draft_.empty()) return false;
+
+    // 참가 중인 파티가 있을 때만 채팅 전송
+    if (state_.Screen() != ScreenState::PartyWaiting || !state_.InParty()) return false;
+
+    ChatSend message;
+    message.text = WideToUtf8(draft_);
+    message.textLength = static_cast<uint16_t>(message.text.size());
+
+    const uint32_t requestId = nextRequestId_();
+    const PacketCodec::Packet packet = PacketCodec::Encode(message, requestId);
+    if (packet.empty() || !send_(packet)) {
+        printf("[오류] CHAT_SEND 전송 실패\n");
+        return false;   // 보내지 못했으므로 입력 내용은 그대로 둠
+    }
+
+    printf("[송신] CHAT_SEND 본문 %zu바이트, 패킷 전체 %zu바이트, requestId=%u: %s\n",
+        message.text.size(), packet.size(), requestId, WideToConsole(draft_).c_str());
+
+    draft_.clear();
+    caret_ = 0;
+    GameWindow_Invalidate();
+    return true;
+}
+
+void ChatUI::Draw(HDC hdc, const std::vector<ChatMessage>& chatLog)
+{
+    LoadBitmaps();
+
+    const RECT icon = ToggleButtonRect();
+    DrawTransparentBitmap(hdc, iconBitmap_, icon.left, icon.top);
+
+    if (!open_) return;
+
+    const RECT window = WindowRect();
+    DrawTransparentBitmap(hdc, windowBitmap_, window.left, window.top);
+
+    // 입력 중인 문장, 커서 위치에 조합 중인 글자를 끼워서 표시
+    const RECT input = {
+        window.left + kInputLeft + kInputPadding, window.top + kInputTop,
+        window.left + kInputLeft + kInputWidth - kInputPadding, window.top + kInputTop + kInputHeight };
+    DrawDraft(hdc, input, draft_.substr(0, caret_), composing_, draft_.substr(caret_));
+
+    // 메시지 목록은 서버가 채팅을 방송하는 작업 후, 말풍선 이미지 위에 이름과 본문으로 표시
+    (void)chatLog;
+}

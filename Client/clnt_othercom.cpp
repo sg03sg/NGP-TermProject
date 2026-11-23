@@ -9,6 +9,7 @@
 #include "ClientState.h"
 #include "LobbyScreen.h"
 #include "InputController.h"
+#include "ChatUI.h"
 #include "GameWindow.h"
 
 #include <sstream>
@@ -474,8 +475,12 @@ int main(int argc, char* argv[])
 	lobby = &lobbyScreen;
 	GameWindow_SetLobby(&lobbyScreen);
 
-	// 창의 클릭은 InputController가 받아 로비, 파티 UI, 전투 소환으로 분배
-	InputController inputController(lobbyScreen, sendToServer, nextRequestId);
+	// 채팅 UI는 파티 대기창 옆에 표시되고 서버로 채팅을 보냄
+	ChatUI chatUI(lobbyScreen.State(), sendToServer, nextRequestId);
+	GameWindow_SetChat(&chatUI);
+
+	// 창의 클릭과 키 입력은 InputController가 받아 로비, 파티, 채팅, 전투 소환으로 분배
+	InputController inputController(lobbyScreen, chatUI, sendToServer, nextRequestId);
 	GameWindow_SetInput(&inputController);
 
 	PacketBuffer packetBuffer;
@@ -483,6 +488,7 @@ int main(int argc, char* argv[])
 	GameFramework::Run(hWnd, &mode);
 
 	GameWindow_SetInput(nullptr);
+	GameWindow_SetChat(nullptr);
 	GameWindow_SetLobby(nullptr);
 	if (IsWindow(hWnd)) DestroyWindow(hWnd);
 

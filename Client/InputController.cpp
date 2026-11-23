@@ -51,7 +51,7 @@ namespace {
     }
 }
 
-InputController::InputController(LobbyScreen& lobby, SendFn send, RequestIdFn nextRequestId) : lobby_(lobby), send_(std::move(send)), nextRequestId_(std::move(nextRequestId))
+InputController::InputController(LobbyScreen& lobby, ChatUI& chat, SendFn send, RequestIdFn nextRequestId) : lobby_(lobby), chat_(chat), send_(std::move(send)), nextRequestId_(std::move(nextRequestId))
 {
 
 }
@@ -76,6 +76,32 @@ void InputController::OnLButtonDown(int x, int y)
     default:
         break;
     }
+}
+
+bool InputController::IsChatInputActive() const
+{
+    return !isLoading && lobby_.State().Screen() == ScreenState::PartyWaiting && chat_.IsOpen();
+}
+
+void InputController::OnChar(wchar_t ch)
+{
+    // 파티 대기창에서 채팅창이 열려 있을 때만 키 입력을 채팅으로 전달
+    if (!IsChatInputActive()) return;
+
+    if (ch == L'\r') chat_.OnEnterKey();
+    else chat_.OnChar(ch);
+}
+
+void InputController::OnKeyDown(WPARAM key)
+{
+    if (!IsChatInputActive()) return;
+    chat_.OnKeyDown(key);
+}
+
+void InputController::OnImeComposition(const std::wstring& result, const std::wstring& composing)
+{
+    if (!IsChatInputActive()) return;
+    chat_.OnComposition(result, composing);
 }
 
 void InputController::SelectUnit(UnitType type)
@@ -113,6 +139,13 @@ void InputController::OnLobbyClick(const POINT& point)
 
 void InputController::OnPartyClick(const POINT& point)
 {
+    // 채팅 아이콘은 채팅창을 열고 닫음
+    const RECT chatIcon = ChatUI::ToggleButtonRect();
+    if (PtInRect(&chatIcon, point)) {
+        chat_.Toggle();
+        return;
+    }
+
     // 파티 대기창이 떠 있는 동안 창 밖 클릭은 뒤의 화면으로 전달하지 않고 무시
     const RECT start = PartyUI::StartButtonRect();
     const RECT leave = PartyUI::LeaveButtonRect();

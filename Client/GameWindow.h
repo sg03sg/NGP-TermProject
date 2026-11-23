@@ -6,6 +6,7 @@
 
 class LobbyScreen;
 class InputController;
+class ChatUI;
 
 // 게임 창 생성 후 로딩 타이머 시작
 // 화면은 Renderer 모듈이 그리고, 창은 메시지 루프를 가진 GameFramework::Run에서 갱신
@@ -17,7 +18,10 @@ void GameWindow_OnTimer(int timerId);
 // 파티 대기창을 게임 화면 위에 얹고 클릭을 넘겨줄 대상 등록
 void GameWindow_SetLobby(LobbyScreen* lobby);
 
-// 창의 마우스 클릭을 넘겨줄 대상 등록
+// 파티 대기창 옆에 얹어 그릴 채팅 UI 등록
+void GameWindow_SetChat(ChatUI* chat);
+
+// 창의 마우스 클릭과 키 입력을 넘겨줄 대상 등록
 void GameWindow_SetInput(InputController* input);
 
 // BATTLE_INIT 내용으로 구조물·마나·시간을 채우고 해당 스테이지의 전투 화면으로 전환
