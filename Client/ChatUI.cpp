@@ -3,6 +3,7 @@
 #include "LobbyUiCommon.h"
 #include "PartyUI.h"
 #include "../resource.h"
+#include "../RendererGlobals.h"
 #include <cstdio>
 
 namespace {
@@ -13,6 +14,10 @@ namespace {
     constexpr int kWindowWidth = 360;
     constexpr int kWindowHeight = 480;
     constexpr int kWindowGap = 10;        // 파티 창과 채팅창 사이
+
+    // 전투 화면의 채팅창 배치
+    constexpr int kBattleWindowLeft = 10;   // 화면 왼쪽 끝에서 띄움
+    constexpr int kBattleWindowGap = 60;    // 왼쪽 위의 마나 표시 아래로 띄우는 간격
 
     // 채팅창 이미지 안쪽의 입력 영역
     constexpr int kInputLeft = 20;
@@ -120,15 +125,28 @@ void ChatUI::LoadBitmaps()
     if (bubbleBitmap_ == nullptr) bubbleBitmap_ = LoadResourceBitmap(IDB_CHAT_BUBBLE);
 }
 
-RECT ChatUI::ToggleButtonRect()
+RECT ChatUI::ToggleButtonRect() const
 {
+    if (state_.Screen() == ScreenState::Battle) {
+        // 전투 화면은 하단 병종 UI의 오른쪽에 아래쪽을 맞춰 붙임
+        const int left = uis[0].x + uis[0].length + kIconGap;
+        const int bottom = uis[0].y + uis[0].height;
+        return RECT{ left, bottom - kIconHeight, left + kIconWidth, bottom };
+    }
+
     // 파티 창의 오른쪽 아래 모서리 바로 밑, 채팅창이 열려도 가려지지 않는 자리
     const RECT party = PartyUI::PanelRect();
     return RECT{ party.right - kIconWidth, party.bottom + kIconGap, party.right, party.bottom + kIconGap + kIconHeight };
 }
 
-RECT ChatUI::WindowRect()
+RECT ChatUI::WindowRect() const
 {
+    if (state_.Screen() == ScreenState::Battle) {
+        // 왼쪽 위의 마나 표시와 하단 병종 UI를 가리지 않도록 그 사이의 왼쪽에 배치
+        const int top = uis[2].y + uis[2].height + kBattleWindowGap;
+        return RECT{ kBattleWindowLeft, top, kBattleWindowLeft + kWindowWidth, top + kWindowHeight };
+    }
+
     // 파티 창을 가리지 않도록 파티 창의 오른쪽에 같은 높이로 배치
     const RECT party = PartyUI::PanelRect();
     return RECT{ party.right + kWindowGap, party.top, party.right + kWindowGap + kWindowWidth, party.top + kWindowHeight };
@@ -211,8 +229,9 @@ bool ChatUI::OnEnterKey()
 {
     if (!open_ || draft_.empty()) return false;
 
-    // 참가 중인 파티가 있을 때만 채팅 전송
-    if (state_.Screen() != ScreenState::PartyWaiting || !state_.InParty()) return false;
+    // 파티 대기 중이거나 전투 중이고 참가 중인 파티가 있을 때만 채팅 전송
+    const ScreenState screen = state_.Screen();
+    if ((screen != ScreenState::PartyWaiting && screen != ScreenState::Battle) || !state_.InParty()) return false;
 
     ChatSend message;
     message.text = WideToUtf8(draft_);

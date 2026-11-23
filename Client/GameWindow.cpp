@@ -98,7 +98,11 @@ namespace {
 					// 파티 대기창이 떠 있을 때만 채팅 아이콘과 채팅창 표시, 메시지 목록은 서버 채팅 방송 구현 후 연결
 					if (chat != nullptr && lobby->IsPartyVisible()) chat->Draw(memDC, std::vector<ChatMessage>());
 				}
-				if (battleOverlay) input->PaintOverlay(memDC);
+				if (battleOverlay) {
+					input->PaintOverlay(memDC);
+					// 전투 화면에서는 병종 UI 오른쪽의 채팅 아이콘과 왼쪽에 열린 채팅창 표시
+					if (chat != nullptr) chat->Draw(memDC, std::vector<ChatMessage>());
+				}
 				BitBlt(hDC, 0, 0, kScreenWidth, kScreenHeight, memDC, 0, 0, SRCCOPY);
 
 				SelectObject(memDC, oldBitmap);

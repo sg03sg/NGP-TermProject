@@ -28,8 +28,8 @@ public:
     void Draw(HDC hdc, const std::vector<ChatMessage>& chatLog);   // 아이콘과 열린 채팅창 표시, 메시지 목록 표시는 서버 채팅 방송 구현 후 추가
 
     bool IsOpen() const { return open_; }
-    static RECT ToggleButtonRect();   // 채팅 아이콘의 화면 좌표
-    static RECT WindowRect();         // 열린 채팅창의 화면 좌표
+    RECT ToggleButtonRect() const;   // 채팅 아이콘의 화면 좌표, 파티 대기창과 전투 화면에서 위치가 다름
+    RECT WindowRect() const;         // 열린 채팅창의 화면 좌표, 파티 대기창과 전투 화면에서 위치가 다름
 
 private:
     void LoadBitmaps();                          // 리소스의 이미지를 처음 그릴 때 한 번 로드

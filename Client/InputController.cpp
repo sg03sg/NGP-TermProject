@@ -80,12 +80,13 @@ void InputController::OnLButtonDown(int x, int y)
 
 bool InputController::IsChatInputActive() const
 {
-    return !isLoading && lobby_.State().Screen() == ScreenState::PartyWaiting && chat_.IsOpen();
+    const ScreenState screen = lobby_.State().Screen();
+    return !isLoading && (screen == ScreenState::PartyWaiting || screen == ScreenState::Battle) && chat_.IsOpen();
 }
 
 void InputController::OnChar(wchar_t ch)
 {
-    // 파티 대기창에서 채팅창이 열려 있을 때만 키 입력을 채팅으로 전달
+    // 파티 대기창이나 전투 화면에서 채팅창이 열려 있을 때만 키 입력을 채팅으로 전달
     if (!IsChatInputActive()) return;
 
     if (ch == L'\r') chat_.OnEnterKey();
@@ -140,7 +141,7 @@ void InputController::OnLobbyClick(const POINT& point)
 void InputController::OnPartyClick(const POINT& point)
 {
     // 채팅 아이콘은 채팅창을 열고 닫음
-    const RECT chatIcon = ChatUI::ToggleButtonRect();
+    const RECT chatIcon = chat_.ToggleButtonRect();
     if (PtInRect(&chatIcon, point)) {
         chat_.Toggle();
         return;
@@ -157,6 +158,17 @@ void InputController::OnPartyClick(const POINT& point)
 void InputController::OnBattleClick(const POINT& point)
 {
     if (gameState < STATE_STAGE1 || gameState > STATE_STAGE3) return;
+
+    // 채팅 아이콘은 채팅창을 열고 닫으며, 열린 채팅창 안의 클릭은 전장 클릭으로 보지 않고 무시
+    const RECT chatIcon = chat_.ToggleButtonRect();
+    if (PtInRect(&chatIcon, point)) {
+        chat_.Toggle();
+        return;
+    }
+    if (chat_.IsOpen()) {
+        const RECT chatWindow = chat_.WindowRect();
+        if (PtInRect(&chatWindow, point)) return;
+    }
 
     // 하단 병종 UI 위 클릭은 병종 선택이며 UI의 나머지 부분은 전장으로 보지 않고 무시
     const RECT panel = UnitPanelRect();

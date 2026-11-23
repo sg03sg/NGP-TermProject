@@ -10,21 +10,20 @@ namespace {
     constexpr int kPanelTop = (kScreenHeight - kPanelHeight) / 2;
 
     // 이미지 안쪽 좌표
-    constexpr int kStageTop = 62;
-    constexpr int kStageHeight = 26;
-    constexpr int kSlotLeft = 30;
-    constexpr int kSlotWidth = 420;
-    constexpr int kSlotTop = 100;
-    constexpr int kSlotHeight = 52;
-    constexpr int kSlotStep = 64;
-    constexpr int kSlotNumberWidth = 40;   // 슬롯 왼쪽의 번호가 차지하는 폭
-    constexpr int kMessageTop = 362;
-    constexpr int kMessageHeight = 32;
-    constexpr int kButtonTop = 410;
-    constexpr int kButtonWidth = 140;
-    constexpr int kButtonHeight = 46;
-    constexpr int kStartLeft = 60;
-    constexpr int kLeaveLeft = 280;
+    constexpr int kStageTop = 77;      // 제목 글씨 아래와 첫 슬롯 위 사이의 좁은 틈
+    constexpr int kStageHeight = 16;
+    constexpr int kSlotNameLeft = 88;  // 슬롯 왼쪽의 번호 칸을 뺀 이름 표시 영역
+    constexpr int kSlotNameWidth = 352;
+    constexpr int kSlotTextHeight = 44;
+    constexpr int kSlotCenterY[kMaxPartyMembers] = { 125, 195, 266, 338 };   // 슬롯마다 세로 중심이 조금씩 다름
+    constexpr int kMessageTop = 372;
+    constexpr int kMessageHeight = 24;
+    constexpr int kButtonTop = 396;
+    constexpr int kButtonHeight = 63;
+    constexpr int kStartLeft = 58;
+    constexpr int kStartWidth = 152;
+    constexpr int kLeaveLeft = 276;
+    constexpr int kLeaveWidth = 146;
     constexpr int kStartOffMargin = 4;   // 회색 버튼 이미지가 시작 버튼보다 사방으로 더 크게 덮는 폭
 
     RECT ScreenRect(int left, int top, int width, int height)
@@ -51,8 +50,8 @@ void PartyUI::LoadBitmaps()
 }
 
 RECT PartyUI::PanelRect() { return RECT{ kPanelLeft, kPanelTop, kPanelLeft + kPanelWidth, kPanelTop + kPanelHeight }; }
-RECT PartyUI::StartButtonRect() { return ScreenRect(kStartLeft, kButtonTop, kButtonWidth, kButtonHeight); }
-RECT PartyUI::LeaveButtonRect() { return ScreenRect(kLeaveLeft, kButtonTop, kButtonWidth, kButtonHeight); }
+RECT PartyUI::StartButtonRect() { return ScreenRect(kStartLeft, kButtonTop, kStartWidth, kButtonHeight); }
+RECT PartyUI::LeaveButtonRect() { return ScreenRect(kLeaveLeft, kButtonTop, kLeaveWidth, kButtonHeight); }
 
 void PartyUI::Draw(HDC hdc, const PartyState& partyState)
 {
@@ -61,14 +60,14 @@ void PartyUI::Draw(HDC hdc, const PartyState& partyState)
 
     // 스테이지 정보는 제목 아래에 표시
     const RECT stageArea = ScreenRect(0, kStageTop, kPanelWidth, kStageHeight);
-    DrawLabel(hdc, stageArea, L"스테이지 " + std::to_wstring(partyState.mapId), RGB(169, 187, 223), 20, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    DrawLabel(hdc, stageArea, L"스테이지 " + std::to_wstring(partyState.mapId), RGB(169, 187, 223), 15, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     // 정원만큼 슬롯을 순서대로 채우고 남는 슬롯은 빈자리로 표시
     for (int i = 0; i < kMaxPartyMembers; ++i) {
-        const RECT slot = ScreenRect(kSlotLeft + kSlotNumberWidth, kSlotTop + i * kSlotStep, kSlotWidth - kSlotNumberWidth * 2, kSlotHeight);
+        const RECT slot = ScreenRect(kSlotNameLeft, kSlotCenterY[i] - kSlotTextHeight / 2, kSlotNameWidth, kSlotTextHeight);
 
         if (i >= (int)partyState.members.size()) {
-            DrawLabel(hdc, slot, L"빈자리", RGB(125, 137, 166), 22, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+            DrawLabel(hdc, slot, L"빈자리", RGB(150, 145, 135), 22, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
             continue;
         }
 
@@ -82,7 +81,7 @@ void PartyUI::Draw(HDC hdc, const PartyState& partyState)
 
     if (!message_.empty()) {
         const RECT messageArea = ScreenRect(0, kMessageTop, kPanelWidth, kMessageHeight);
-        DrawLabel(hdc, messageArea, message_, RGB(255, 220, 120), 20, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        DrawLabel(hdc, messageArea, message_, RGB(255, 220, 120), 18, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     }
 
     // 시작 버튼은 방장만 쓸 수 있으므로 방장이 아니면 회색 버튼으로 덮음
