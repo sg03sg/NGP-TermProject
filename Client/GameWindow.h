@@ -31,3 +31,5 @@ void GameWindow_ApplyUnitCreated(const UnitCreated& message);
 
 // 서버가 알린 내 마나(MANA_STATE)를 전투 화면에 반영
 void GameWindow_ApplyManaState(const ManaState& state);
+
+void GameWindow_ApplyBattleState(const BattleState& message);

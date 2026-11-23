@@ -363,16 +363,8 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
         const Unit& u = entry.unit;
         if (u.GetType() != UnitType::Barbarian) continue;
         int x = u.x, y = u.y, frame = u.frameIndex;
-        int tidx = u.targetIndex;
-        HBITMAP bmpToUse = hWalkBmp[frame];
-        BITMAP* bmpInfo = &bmpWalk[frame];
-        if (u.hasTarget && tidx >= 0 && tidx < cannonCount[stageIdx]) {
-            int cannonX = cannons[stageIdx][tidx].x;
-            if (x < cannonX) {
-                bmpToUse = hRightWalkBmp[frame];
-                bmpInfo = &bmpRightWalk[frame];
-            }
-        }
+        HBITMAP bmpToUse = u.facingRight ? hRightWalkBmp[frame] : hWalkBmp[frame];
+        BITMAP* bmpInfo = u.facingRight ? &bmpRightWalk[frame] : &bmpWalk[frame];
         SelectObject(paintDC, bmpToUse);
         COLORREF baba_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, x, y, tileHeight, tileHeight, paintDC, 0, 0,
@@ -385,16 +377,8 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
         const Unit& u = entry.unit;
         if (u.GetType() != UnitType::Archer) continue;
         int x = u.x, y = u.y, frame = u.frameIndex;
-        int tidx = u.targetIndex;
-        HBITMAP bmpToUse = hArcherBmp[frame];
-        BITMAP* bmpInfo = &aWalk[frame];
-        if (u.hasTarget && tidx >= 0 && tidx < cannonCount[stageIdx]) {
-            int cannonX = cannons[stageIdx][tidx].x;
-            if (x < cannonX) {
-                bmpToUse = hrightarcherbmp[frame];
-                bmpInfo = &bmprightarcher[frame];
-            }
-        }
+        HBITMAP bmpToUse = u.facingRight ? hrightarcherbmp[frame] : hArcherBmp[frame];
+        BITMAP* bmpInfo = u.facingRight ? &bmprightarcher[frame] : &aWalk[frame];
         SelectObject(paintDC, bmpToUse);
         COLORREF archer_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, x, y, tileHeight, tileHeight, paintDC, 0, 0,

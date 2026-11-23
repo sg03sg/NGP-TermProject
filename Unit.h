@@ -39,6 +39,7 @@ public:
 
     int x, y;
     int frameIndex;
+    bool facingRight = false;
     int speed;
     int atk;
     int range;

@@ -250,6 +250,45 @@ void GameWindow_ApplyUnitCreated(const UnitCreated& message)
 	GameWindow_Invalidate();
 }
 
+void GameWindow_ApplyBattleState(const BattleState& message)
+{
+	for (const UnitStateInfo& state : message.units) {
+		if (state.unitId == 0 || state.unitId > INT_MAX ||
+			state.x > INT_MAX || state.y > INT_MAX) {
+			continue;
+		}
+
+		Unit* unit = gameBattle.FindUnit(static_cast<int>(state.unitId));
+		if (unit == nullptr) {
+			continue;
+		}
+
+		const int newX = static_cast<int>(state.x);
+		const int newY = static_cast<int>(state.y);
+		const bool moved = (unit->x != newX || unit->y != newY);
+
+		if (newX != unit->x) {
+			unit->facingRight = (newX > unit->x);
+		}
+
+		if (moved) {
+			// 바바리안·아처는 20틱, 자이언트는 40틱마다 다음 걷기 그림을 표시한다.
+			const uint32_t ticksPerFrame =
+				(unit->GetType() == UnitType::Giant) ? 40u : 20u;
+
+			unit->frameIndex = static_cast<int>((message.serverTick / ticksPerFrame) % 3u);
+		}
+		else {
+			unit->frameIndex = 0;
+		}
+
+		unit->x = newX;
+		unit->y = newY;
+	}
+
+	GameWindow_Invalidate();
+}
+
 void GameWindow_ApplyManaState(const ManaState& state)
 {
 	mana = state.mana;

@@ -192,7 +192,7 @@ static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 				unit.hp,
 				unit.maxHp);
 		}
-
+		GameWindow_ApplyBattleState(message);
 		break;
 	}
 
