@@ -2,6 +2,7 @@
 #define GAME_TYPES_H
 
 #include <windows.h>
+#include <cstdint>
 // 여러 모듈에서 공통으로 사용하는 게임 자료형과 상수를 정의한다
 #define MAX_UNITS 100
 #define MAX_TOWER 10
@@ -20,6 +21,7 @@ typedef struct {
     int atk;
     int range;
     int attackCooldown;
+    std::uint32_t structureId;
 } tower;
 
 typedef struct {
@@ -30,6 +32,7 @@ typedef struct {
 	float damageRatio;  // 체력 비례 데미지
 	BOOL isAttacking;
 	int targetId;           // 공격 중인 유닛 id
+    std::uint32_t structureId;
 } InfernoTower;
 
 typedef struct {

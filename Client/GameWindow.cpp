@@ -155,6 +155,7 @@ void GameWindow_EnterBattle(const BattleInit& message, uint32_t myPlayerId)
 	// 서버가 보낸 구조물을 종류별 배열에 채움. 종류 번호는 서버의 StructureKind와 같음
 	for (const StructureInitInfo& structure : message.structures) {
 		tower info = {};
+		info.structureId = structure.structureId;
 		info.x = static_cast<int>(structure.x);
 		info.y = static_cast<int>(structure.y);
 		info.active = TRUE;
@@ -174,6 +175,7 @@ void GameWindow_EnterBattle(const BattleInit& message, uint32_t myPlayerId)
 		case 3:
 			if (infernoCount[stageIdx] < MAX_TOWER) {
 				InfernoTower inferno = {};
+				inferno.structureId = structure.structureId;
 				inferno.x = info.x;
 				inferno.y = info.y;
 				inferno.active = TRUE;
@@ -284,6 +286,35 @@ void GameWindow_ApplyBattleState(const BattleState& message)
 
 		unit->x = newX;
 		unit->y = newY;
+	}
+
+	const int stageIdx = static_cast<int>(gameState) - static_cast<int>(STATE_STAGE1);
+	if (stageIdx >= 0 && stageIdx < 3) {
+		for (const StructureStateInfo& state : message.structures) {
+			if (state.structureId == 0 || state.maxHp == 0 ||
+				state.maxHp > INT_MAX || state.hp > state.maxHp) {
+				continue;
+			}
+
+			auto applyHp = [&](auto& building) {
+				if (building.structureId != state.structureId) return;
+
+				building.hp = static_cast<int>(state.hp);
+				building.maxHp = static_cast<int>(state.maxHp);
+				building.active = (state.hp > 0);
+				};
+
+			applyHp(villageking);
+
+			for (int i = 0; i < cannonCount[stageIdx]; ++i)
+				applyHp(cannons[stageIdx][i]);
+
+			for (int i = 0; i < mortarCount[stageIdx]; ++i)
+				applyHp(mortars[stageIdx][i]);
+
+			for (int i = 0; i < infernoCount[stageIdx]; ++i)
+				applyHp(infernos[stageIdx][i]);
+		}
 	}
 
 	GameWindow_Invalidate();

@@ -322,6 +322,14 @@ void BattleInstance::Update(uint32_t dtMs)
         int targetX = 0;
         int targetY = 0;
         int targetIndex = -1;
+        // BattleLogic::UpdateUnit에서 사용하던 논리 중심 (타일 31x22, 구조물 64x64).
+        constexpr int unitCenterOffsetX = 31 / 2;
+        constexpr int unitCenterOffsetY = 22 / 2;
+        constexpr int structureCenterOffset = 32;
+        const double unitCenterX = entry.preciseX + unitCenterOffsetX;
+        const double unitCenterY = entry.preciseY + unitCenterOffsetY;
+        double targetDx = 0.0;
+        double targetDy = 0.0;
 
         double nearestDistance =
             std::numeric_limits<double>::infinity();
@@ -330,15 +338,17 @@ void BattleInstance::Update(uint32_t dtMs)
         auto considerTarget = [&](const Position& position, int index)
             {
                 const double dx =
-                    static_cast<double>(position.x) - entry.preciseX;
+                    static_cast<double>(position.x) + structureCenterOffset - unitCenterX;
 
                 const double dy =
-                    static_cast<double>(position.y) - entry.preciseY;
+                    static_cast<double>(position.y) + structureCenterOffset - unitCenterY;
 
                 const double distance = std::hypot(dx, dy);
 
                 if (distance < nearestDistance) {
                     nearestDistance = distance;
+                    targetDx = dx;
+                    targetDy = dy;
 
                     targetX = position.x;
                     targetY = position.y;
@@ -375,10 +385,41 @@ void BattleInstance::Update(uint32_t dtMs)
         const double attackRange =
             unit.range > 0 ? static_cast<double>(unit.range) : 0.0;
 
-        // 사거리 안이면 이동을 멈춘다.
-        // 공격 처리는 다음 단계에서 여기에 연결한다.
-        if (nearestDistance <= attackRange) 
+        // 사거리 경계의 부동소수점 오차까지 포함해 도착을 판정한다.
+        if (nearestDistance <= attackRange + 1e-6)
         {
+            if (unit.GetType() != UnitType::Barbarian) {
+                continue;
+            }
+
+            // 서버에서는 남은 공격 대기 시간을 밀리초로 관리한다.
+            if (unit.attackCooldown > 0) {
+                const uint32_t remainingMs =
+                    static_cast<uint32_t>(unit.attackCooldown);
+
+                if (dtMs < remainingMs) {
+                    unit.attackCooldown -= static_cast<int>(dtMs);
+                    continue;
+                }
+            }
+
+            // targetIndex는 위에서 가장 가까운 구조물을 고를 때 정한 값이다.
+            // -1은 마을회관, 0 이상은 towers_의 인덱스다.
+            auto hit = [&](auto& structure) {
+                const uint32_t damage = static_cast<uint32_t>(unit.atk);
+                structure.hp = damage >= structure.hp ? 0u : structure.hp - damage;
+                structure.destroyed = (structure.hp == 0);
+                };
+
+            if (targetIndex == -1) {
+                hit(townHall_);
+            }
+            else {
+                hit(towers_[targetIndex]);
+            }
+
+            // 기존 코드는 200ms 갱신을 10번 쉬고 다음 갱신에 다시 공격한다.
+            unit.attackCooldown = 2200;
             continue;
         }
 
@@ -386,10 +427,6 @@ void BattleInstance::Update(uint32_t dtMs)
         {
             continue;
         }
-
-        const double dx = static_cast<double>(targetX) - entry.preciseX;
-
-        const double dy = static_cast<double>(targetY) - entry.preciseY;
 
         // 기존 speed를 초당 이동 속도로 환산
         const double pixelsPerSecond = static_cast<double>(unit.speed) / oldUpdateSeconds;
@@ -402,8 +439,8 @@ void BattleInstance::Update(uint32_t dtMs)
         const double movement = possibleMovement < distanceToRange ? possibleMovement : distanceToRange;
 
         // 방향을 정규화한 뒤 이동량을 곱한다.
-        entry.preciseX += dx / nearestDistance * movement;
-        entry.preciseY += dy / nearestDistance * movement;
+        entry.preciseX += targetDx / nearestDistance * movement;
+        entry.preciseY += targetDy / nearestDistance * movement;
 
         // 현재 Unit과 패킷은 정수 좌표를 사용한다.
         unit.x = static_cast<int>(std::lround(entry.preciseX));
