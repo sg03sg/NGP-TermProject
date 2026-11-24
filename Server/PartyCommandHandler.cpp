@@ -1,4 +1,4 @@
-#include "PartyCommandHandler.h"
+ï»¿#include "PartyCommandHandler.h"
 #include <iostream>
 
 PartyCommandHandler::PartyCommandHandler(Context ctx) : ctx_(std::move(ctx))
@@ -11,7 +11,7 @@ void PartyCommandHandler::HandleJoinMap(const Command& cmd, PlayerId pid)
     JoinMap msg;
     PacketHeader header;
     if (!PacketCodec::Decode(cmd.packet, msg, &header)) {
-        std::cout << "[Party] JOIN_MAP µğÄÚµù ½ÇÆĞ (Session ID: " << cmd.sessionId << ")" << std::endl;
+        std::cout << "[Party] JOIN_MAP ë””ì½”ë”© ì‹¤íŒ¨ (Session ID: " << cmd.sessionId << ")" << std::endl;
         return;
     }
 
@@ -22,8 +22,8 @@ void PartyCommandHandler::HandleJoinMap(const Command& cmd, PlayerId pid)
         return;
     }
 
-    // »õ Âü°¡ÀÚ¸¦ Æ÷ÇÔÇÑ ÆÄÆ¼¿ø Àü¿ø¿¡°Ô °°Àº ¸í´ÜÀ» º¸³¿.
-    // (+) Ã¤ÆÃ: µÚ´Ê°Ô µé¾î¿Â »ç¶÷¿¡°Ô Áö±İ±îÁöÀÇ Ã¤ÆÃ ³»¿ªÀ» º¸³½´Ù.
+    // ìƒˆ ì°¸ê°€ìë¥¼ í¬í•¨í•œ íŒŒí‹°ì› ì „ì›ì—ê²Œ ê°™ì€ ëª…ë‹¨ì„ ë³´ëƒ„.
+    // (+) ì±„íŒ…: ë’¤ëŠ¦ê²Œ ë“¤ì–´ì˜¨ ì‚¬ëŒì—ê²Œ ì§€ê¸ˆê¹Œì§€ì˜ ì±„íŒ… ë‚´ì—­ì„ ë³´ë‚¸ë‹¤.
 
     BroadcastPartyState(r.partyId);
     if (ctx_.onLobbyChanged) ctx_.onLobbyChanged();
@@ -34,25 +34,26 @@ void PartyCommandHandler::HandleLeaveParty(const Command& cmd, PlayerId pid)
     LeaveParty msg;
     PacketHeader header;
     if (!PacketCodec::Decode(cmd.packet, msg, &header)) {
-        std::cout << "[Party] LEAVE_PARTY µğÄÚµù ½ÇÆĞ (Session ID: " << cmd.sessionId << ")" << std::endl;
+        std::cout << "[Party] LEAVE_PARTY ë””ì½”ë”© ì‹¤íŒ¨ (Session ID: " << cmd.sessionId << ")" << std::endl;
         return;
     }
 
-    // ½ÇÁ¦ ¼Ò¼Ó°ú Å¬¶óÀÌ¾ğÆ®°¡ º¸³½ partyId°¡ ÀÏÄ¡ÇÏ´ÂÁö È®ÀÎ.
+    // ì‹¤ì œ ì†Œì†ê³¼ í´ë¼ì´ì–¸íŠ¸ê°€ ë³´ë‚¸ partyIdê°€ ì¼ì¹˜í•˜ëŠ”ì§€ í™•ì¸.
     const PartyId current = ctx_.parties.PartyOf(pid);
     if (current == kInvalidPartyId || current != msg.partyId) {
         SendRejected(pid, MessageType::LEAVE_PARTY, PartyError::NotInParty, header.requestId);
         return;
     }
 
-    // ÀüÅõ Áß ÀÌÅ»Àº Áß´Ü ÅõÇ¥(ABORT_VOTE_*)·Î Ã³¸®
+    // ì „íˆ¬ ì¤‘(Running) ì´íƒˆì€ ì¤‘ë‹¨ íˆ¬í‘œ(ABORT_VOTE_*)ë¡œ ì²˜ë¦¬í•œë‹¤.
+    // ëŒ€ê¸°(Waiting)ì™€ ì „íˆ¬ê°€ ëë‚œ ë’¤(Finished)ì—ëŠ” ë°”ë¡œ ë‚˜ê°ˆ ìˆ˜ ìˆë‹¤.
     const Party* party = ctx_.parties.GetParty(current);
-    if (party && party->Status() != PartyStatus::Waiting) {
+    if (party && party->Status() == PartyStatus::Running) {
         SendRejected(pid, MessageType::LEAVE_PARTY, PartyError::StageLocked, header.requestId);
         return;
     }
 
-    // ¸í´Ü Á¦°Å, ¹æÀå ÀÌÀü, ºó ÆÄÆ¼ »èÁ¦, ¸Ê Á¡À¯ ÇØÁ¦´Â PartyManager°¡ ÇÑ´Ù.
+    // ëª…ë‹¨ ì œê±°, ë°©ì¥ ì´ì „, ë¹ˆ íŒŒí‹° ì‚­ì œ, ë§µ ì ìœ  í•´ì œëŠ” PartyManagerê°€ í•œë‹¤.
     const PartyResult r = ctx_.parties.LeaveParty(pid);
     if (!r.success) {
         SendRejected(pid, MessageType::LEAVE_PARTY, r.error, header.requestId);
@@ -63,7 +64,7 @@ void PartyCommandHandler::HandleLeaveParty(const Command& cmd, PlayerId pid)
     ack.partyId = r.partyId;
     if (ctx_.sendToPlayer) ctx_.sendToPlayer(pid, PacketCodec::Encode(ack, header.requestId));
 
-    // ³²Àº ÆÄÆ¼¿ø¿¡°Ô °»½ÅµÈ ¸í´Ü(»õ ¹æÀå Æ÷ÇÔ)À» º¸³½´Ù. ¸¶Áö¸· »ç¶÷ÀÌ ³ª°¡ ÆÄÆ¼°¡ »ç¶óÁ³´Ù¸é º¸³¾ ´ë»óÀÌ ¾ø´Ù.
+    // ë‚¨ì€ íŒŒí‹°ì›ì—ê²Œ ê°±ì‹ ëœ ëª…ë‹¨(ìƒˆ ë°©ì¥ í¬í•¨)ì„ ë³´ë‚¸ë‹¤. ë§ˆì§€ë§‰ ì‚¬ëŒì´ ë‚˜ê°€ íŒŒí‹°ê°€ ì‚¬ë¼ì¡Œë‹¤ë©´ ë³´ë‚¼ ëŒ€ìƒì´ ì—†ë‹¤.
     if (!r.disbanded) BroadcastPartyState(r.partyId);
     if (ctx_.onLobbyChanged) ctx_.onLobbyChanged();
 }
@@ -72,7 +73,7 @@ void PartyCommandHandler::HandlePlayerLeft(PlayerId pid)
 {
     if (!ctx_.parties.IsInParty(pid)) return;
 
-    // (+) ÀüÅõ Áß(Running) ÀÌÅ»Àº Áß´Ü ÅõÇ¥·Î Ã³¸®ÇØ¾ß ÇÑ´Ù. Áö±İÀº ´ë±â Áß°ú °°ÀÌ ¸í´Ü¿¡¼­¸¸ Á¦°Å.
+    // (+) ì „íˆ¬ ì¤‘(Running) ì´íƒˆì€ ì¤‘ë‹¨ íˆ¬í‘œë¡œ ì²˜ë¦¬í•´ì•¼ í•œë‹¤. ì§€ê¸ˆì€ ëŒ€ê¸° ì¤‘ê³¼ ê°™ì´ ëª…ë‹¨ì—ì„œë§Œ ì œê±°.
     const PartyResult r = ctx_.parties.LeaveParty(pid);
     if (!r.success) return;
 
@@ -84,7 +85,7 @@ void PartyCommandHandler::SendRejected(PlayerId pid, MessageType rejectedType, P
 {
     RequestRejected msg;
     msg.rejectedType = static_cast<uint16_t>(rejectedType);
-    msg.errorCode = static_cast<uint16_t>(error);   // PartyErrorÀÇ ¼ıÀÚ °ªÀ» Å¬¶óÀÌ¾ğÆ®¿Í °øÀ¯ÇØ¾ß ÇÑ´Ù
+    msg.errorCode = static_cast<uint16_t>(error);   // PartyErrorì˜ ìˆ«ì ê°’ì„ í´ë¼ì´ì–¸íŠ¸ì™€ ê³µìœ í•´ì•¼ í•œë‹¤
     if (ctx_.sendToPlayer) ctx_.sendToPlayer(pid, PacketCodec::Encode(msg, requestId));
 }
 
@@ -103,7 +104,7 @@ void PartyCommandHandler::BroadcastPartyState(PartyId partyId)
     for (const PartyMemberInfoView& m : info.members) {
         PartyMemberInfo pm;
         pm.playerId = m.playerId;
-        pm.name = m.name;          // ±æÀÌ ÇÊµå´Â Encode°¡ name.size()·Î Ã¤¿î´Ù
+        pm.name = m.name;          // ê¸¸ì´ í•„ë“œëŠ” Encodeê°€ name.size()ë¡œ ì±„ìš´ë‹¤
         msg.members.push_back(pm);
     }
 

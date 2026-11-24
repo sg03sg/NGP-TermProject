@@ -8,6 +8,7 @@
 #include <chrono>
 #include <map>
 #include "BattleInstance.h"
+#include "BattleManager.h"
 #include "SessionManager.h"
 #include "ThreadSafeQueue.h"
 #include "LobbyBroadcaster.h"
@@ -22,10 +23,9 @@ private:
     ThreadSafeQueue<Command> requestQueue_;
     std::thread acceptThread_;
     std::thread workerThread_;
-    std::map<PartyId, std::unique_ptr<BattleInstance>> battles_;
-
     SessionManager session_manager_;
     PartyManager partyManager_;
+    BattleManager battleManager_;
     LobbyBroadcaster lobbyBroadcaster_;
     CommandDispatcher dispatcher_;
 
@@ -42,9 +42,9 @@ public:
     SessionManager& GetSessionManager() { return session_manager_; }
     PartyManager& GetPartyManager() { return partyManager_; }
     LobbyBroadcaster& GetLobbyBroadcaster() { return lobbyBroadcaster_; }
+    BattleManager& GetBattleManager() { return battleManager_; }
     void RemoveSession(int sessionId);
     void BroadcastPacket(const char* data, int length);
     bool PushRequest(Command command);   // 요청 큐에 요청 추가, 세션 스레드에서 호출
     BattleInstance* FindBattle(PartyId partyId);
-    bool AddBattle(PartyId partyId, std::unique_ptr<BattleInstance> battle);
 };

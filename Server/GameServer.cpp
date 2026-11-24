@@ -105,7 +105,7 @@ bool GameServer::PushRequest(Command command) {
     return requestQueue_.Push(std::move(command));
 }
 
-void GameServer::WorkerLoop() 
+void GameServer::WorkerLoop()
 {
     using Clock = std::chrono::steady_clock;
 
@@ -137,7 +137,7 @@ void GameServer::WorkerLoop()
         previous += elapsed;
 
         // 3. 전투별 이동 계산
-        for (auto& entry : battles_) {
+        for (auto& entry : battleManager_.Battles()) {
             entry.second->Update(dtMs);
         }
 
@@ -145,17 +145,17 @@ void GameServer::WorkerLoop()
         const auto sendNow = Clock::now();
 
         if (sendNow >= nextStateSend) {
-            for (const auto& entry : battles_) 
+            for (const auto& entry : battleManager_.Battles())
             {
                 const Party* party = partyManager_.GetParty(entry.first); // 진행중인 파티의 전투만 전송 대상
-                if (!party || party->Status() != PartyStatus::Running) 
+                if (!party || party->Status() != PartyStatus::Running)
                 {
                     continue;
                 }
 
                 const BattleState state = entry.second->BuildBattleState();
                 const BattleProgress progress = entry.second->BuildBattleProgress();
-          
+
                 dispatcher_.SendBattleState(state);
                 dispatcher_.SendBattleProgress(progress);
                 if (entry.second->IsFinished())
@@ -169,6 +169,10 @@ void GameServer::WorkerLoop()
             // 최신 상태 한 번을 보낸 뒤 다음 전송을 예약한다.
             nextStateSend = sendNow + stateSendInterval;
         }
+
+        // 파티가 사라진 전투 정리
+        battleManager_.RemoveBattlesWithoutParty(
+            [this](PartyId id) { return partyManager_.GetParty(id) != nullptr; });
 
         // 5. 끊긴 세션 정리
         session_manager_.ReapClosed();
@@ -202,7 +206,7 @@ void GameServer::Stop() {
     if (acceptThread_.joinable()) acceptThread_.join();
     if (workerThread_.joinable()) workerThread_.join();
 
-    battles_.clear(); 
+    battleManager_.Clear();
 
     // 안전하게 모든 세션 정리
     session_manager_.Clear();
@@ -214,15 +218,5 @@ void GameServer::Stop() {
 
 BattleInstance* GameServer::FindBattle(PartyId partyId)
 {
-    auto it = battles_.find(partyId);
-    return it == battles_.end() ? nullptr : it->second.get();
-}
-
-bool GameServer::AddBattle(
-    PartyId partyId,
-    std::unique_ptr<BattleInstance> battle)
-{
-    if (!battle) return false;
-
-    return battles_.emplace(partyId, std::move(battle)).second;
+    return battleManager_.FindBattle(partyId);
 }

@@ -18,6 +18,47 @@ namespace {
         std::cout << "[CommandDispatcher] 세션 " << cmd.sessionId << ": " << name
             << " 수신 " << cmd.packet.size() << "바이트, 처리 함수 미구현" << std::endl;
     }
+
+    // 계획서의 채팅 본문 제한, 패킷에 실리는 UTF-8 바이트 수 기준
+    constexpr size_t kMaxChatBytes = 100;
+
+    // 채팅 본문 검사: 비어 있지 않고, 길이 한도 이내이며, 올바른 UTF-8이고, 제어 문자가 없어야 함
+    bool IsValidChatText(const std::string& text)
+    {
+        if (text.empty() || text.size() > kMaxChatBytes) return false;
+
+        size_t i = 0;
+        while (i < text.size()) {
+            const uint8_t lead = static_cast<uint8_t>(text[i]);
+
+            size_t length = 0;
+            uint32_t minCodePoint = 0;
+            uint32_t codePoint = 0;
+            if (lead < 0x80)                length = 1;
+            else if ((lead & 0xE0) == 0xC0) { length = 2; minCodePoint = 0x80;    codePoint = lead & 0x1F; }
+            else if ((lead & 0xF0) == 0xE0) { length = 3; minCodePoint = 0x800;   codePoint = lead & 0x0F; }
+            else if ((lead & 0xF8) == 0xF0) { length = 4; minCodePoint = 0x10000; codePoint = lead & 0x07; }
+            else return false;
+
+            if (i + length > text.size()) return false;
+
+            if (length == 1) {
+                if (lead < 0x20 || lead == 0x7F) return false;   // 줄바꿈 같은 제어 문자 거부
+            }
+            else {
+                for (size_t k = 1; k < length; ++k) {
+                    const uint8_t next = static_cast<uint8_t>(text[i + k]);
+                    if ((next & 0xC0) != 0x80) return false;
+                    codePoint = (codePoint << 6) | (next & 0x3F);
+                }
+                // 너무 길게 인코딩한 값, 범위를 넘은 값, 서로게이트 영역은 잘못된 UTF-8
+                if (codePoint < minCodePoint || codePoint > 0x10FFFF || (codePoint >= 0xD800 && codePoint <= 0xDFFF)) return false;
+            }
+
+            i += length;
+        }
+        return true;
+    }
 }
 
 CommandDispatcher::CommandDispatcher(GameServer& server)
@@ -62,14 +103,14 @@ void CommandDispatcher::SendBattleState(const BattleState& message)
 {
     const Party* party = server_.GetPartyManager().GetParty(message.partyId);
 
-    if (!party || party->Status() != PartyStatus::Running) 
+    if (!party || party->Status() != PartyStatus::Running)
     {
         return;
     }
 
     const PacketCodec::Packet packet = PacketCodec::Encode(message, 0);
 
-    if (packet.empty()) 
+    if (packet.empty())
     {
         std::cout << "[BATTLE_STATE] Encode failed\n";
         return;
@@ -187,13 +228,58 @@ void CommandDispatcher::HandleLeaveParty(const Command& cmd)
     if (pid == kInvalidPlayerId) { std::cout << "[CommandDispatcher] 세션 " << cmd.sessionId << ": HELLO 전 LEAVE_PARTY 무시" << std::endl; return; }
     partyHandler_.HandleLeaveParty(cmd, pid);
 }
-void CommandDispatcher::HandleChatSend(const Command& cmd) { LogReceived(cmd, "CHAT_SEND"); }
+void CommandDispatcher::HandleChatSend(const Command& cmd)
+{
+    ChatSend request;
+    PacketHeader header;
+
+    if (!PacketCodec::Decode(cmd.packet, request, &header)) {
+        std::cout << "[CommandDispatcher] 세션 " << cmd.sessionId << ": CHAT_SEND 디코딩 실패" << std::endl;
+        return;
+    }
+
+    // 보낸 사람은 요청 본문이 아니라 접속 세션으로 확인
+    const PlayerId pid = PlayerOf(cmd.sessionId);
+    if (pid == kInvalidPlayerId) {
+        std::cout << "[CommandDispatcher] 세션 " << cmd.sessionId << ": HELLO 전 CHAT_SEND 무시" << std::endl;
+        return;
+    }
+
+    // 채팅은 같은 파티 안에서만 주고받음, 파티가 없으면 거절 사유를 알림
+    PartyManager& parties = server_.GetPartyManager();
+    if (!parties.IsInParty(pid)) {
+        RequestRejected rejected;
+        rejected.rejectedType = static_cast<uint16_t>(MessageType::CHAT_SEND);
+        rejected.errorCode = static_cast<uint16_t>(PartyError::NotInParty);
+        SendToSession(cmd.sessionId, PacketCodec::Encode(rejected, header.requestId));
+        return;
+    }
+
+    // 정상 클라이언트는 보내지 않는 본문이므로 알리지 않고 버림
+    if (!IsValidChatText(request.text)) {
+        std::cout << "[CommandDispatcher] 플레이어 " << pid << ": 잘못된 CHAT_SEND 본문 무시 ("
+            << request.text.size() << "바이트)" << std::endl;
+        return;
+    }
+
+    ChatMessage chat;
+    chat.senderId = pid;
+    chat.text = request.text;
+    chat.textLength = static_cast<uint16_t>(chat.text.size());
+
+    // 보낸 사람을 포함한 같은 파티 전체에 방송, 공통 이벤트이므로 requestId는 0을 사용한다.
+    const PartyId partyId = parties.PartyOf(pid);
+    SendToPlayers(parties.MembersOf(partyId), PacketCodec::Encode(chat, 0));
+
+    std::cout << "[CHAT_MESSAGE] partyId=" << partyId << " senderId=" << pid
+        << " 본문 " << chat.text.size() << "바이트" << std::endl;
+}
 
 void CommandDispatcher::HandleSpawn(const Command& cmd) {
     SpawnRequest request;
     PacketHeader header;
 
-    if (!PacketCodec::Decode(cmd.packet, request, &header)) 
+    if (!PacketCodec::Decode(cmd.packet, request, &header))
     {
         std::cout << "[SPAWN_REQUEST] Decode failed\n";
         return;
@@ -213,7 +299,7 @@ void CommandDispatcher::HandleSpawn(const Command& cmd) {
     const PlayerId pid = PlayerOf(cmd.sessionId);
     PartyManager& parties = server_.GetPartyManager();
 
-    if (pid == kInvalidPlayerId || !parties.IsInParty(pid)) 
+    if (pid == kInvalidPlayerId || !parties.IsInParty(pid))
     {
         reject(ErrorCode::NotInBattle);
         return;
@@ -254,7 +340,7 @@ void CommandDispatcher::HandleSpawn(const Command& cmd) {
     // 병종별 정렬 삽입이므로 반환된 ID로 조회한다.
     Unit* unit = battle->FindUnit(static_cast<int>(result.unitId));
 
-    if (!unit) 
+    if (!unit)
     {
         std::cout << "[SPAWN_REQUEST] Created unit not found\n";
         return;
@@ -373,9 +459,17 @@ void CommandDispatcher::HandleStartGame(const Command& cmd)
         return;
     }
 
-    auto battle = std::make_unique<BattleInstance>(party->Id());
+    // 전투 생성과 보관은 BattleManager가 한다.
+    BattleInstance* battle = nullptr;
+    const BattleCreateResult created = server_.GetBattleManager().CreateBattle(
+        party->Id(), map, party->Members(), battle);
 
-    if (!battle->Initialize(map, party->Members())) {
+    if (created == BattleCreateResult::AlreadyExists) {
+        reject(PartyError::StageLocked);
+        return;
+    }
+
+    if (created != BattleCreateResult::Created) {
         std::cout << "[START_GAME] Battle initialization failed\n";
         reject(PartyError::InvalidStage);
         return;
@@ -387,11 +481,7 @@ void CommandDispatcher::HandleStartGame(const Command& cmd)
 
     if (packet.empty()) {
         std::cout << "[START_GAME] BATTLE_INIT encoding failed\n";
-        return;
-    }
-
-    if (!server_.AddBattle(party->Id(), std::move(battle))) {
-        reject(PartyError::StageLocked);
+        server_.GetBattleManager().RemoveBattle(party->Id());   // 시작하지 못했으니 보관하지 않는다.
         return;
     }
 
