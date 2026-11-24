@@ -26,11 +26,24 @@ namespace {
     constexpr int kInputHeight = 44;
     constexpr int kInputPadding = 8;
 
-    constexpr size_t kMaxDraftLength = 100;   // 한 번에 보낼 수 있는 글자 수
+    constexpr size_t kMaxChatBytes = 100;   // 계획서의 채팅 본문 제한, 서버로 보내는 UTF-8 바이트 수 기준
 
     bool IsHighSurrogate(wchar_t ch) { return ch >= 0xD800 && ch <= 0xDBFF; }
     bool IsLowSurrogate(wchar_t ch) { return ch >= 0xDC00 && ch <= 0xDFFF; }
 
+    // UTF-16 문자열을 UTF-8로 바꿨을 때의 바이트 수
+    size_t Utf8Length(const std::wstring& text)
+    {
+        size_t bytes = 0;
+        for (size_t i = 0; i < text.size(); ++i) {
+            const wchar_t ch = text[i];
+            if (ch < 0x80) bytes += 1;
+            else if (ch < 0x800) bytes += 2;
+            else if (IsHighSurrogate(ch) && i + 1 < text.size() && IsLowSurrogate(text[i + 1])) { bytes += 4; ++i; }   // 이모지처럼 두 글자가 한 문자
+            else bytes += 3;                                                                                         // 한글, 한자 등
+        }
+        return bytes;
+    }
     std::string WideToUtf8(const std::wstring& text)
     {
         if (text.empty()) return std::string();
@@ -156,14 +169,29 @@ void ChatUI::Toggle()
 {
     open_ = !open_;
     composing_.clear();
+    pendingHigh_ = 0;
     GameWindow_Invalidate();
 }
 
 void ChatUI::InsertAtCaret(const std::wstring& text)
 {
-    if (draft_.size() >= kMaxDraftLength) return;
+    // 글자 수가 아니라 서버로 보낼 UTF-8 바이트 수가 100을 넘지 않을 만큼만 문자 단위로 넣음
+    size_t used = Utf8Length(draft_);
+    std::wstring part;
 
-    const std::wstring part = text.substr(0, kMaxDraftLength - draft_.size());
+    for (size_t i = 0; i < text.size(); ) {
+        size_t unit = 1;   // 이모지처럼 두 글자가 한 문자면 함께 넣거나 함께 버림
+        if (IsHighSurrogate(text[i]) && i + 1 < text.size() && IsLowSurrogate(text[i + 1])) unit = 2;
+
+        const std::wstring one = text.substr(i, unit);
+        const size_t cost = Utf8Length(one);
+        if (used + cost > kMaxChatBytes) break;
+
+        part += one;
+        used += cost;
+        i += unit;
+    }
+
     draft_.insert(caret_, part);
     caret_ += part.size();
 }
@@ -182,7 +210,18 @@ void ChatUI::OnChar(wchar_t ch)
         draft_.erase(caret_ - count, count);
         caret_ -= count;
     }
+    else if (IsHighSurrogate(ch)) {
+        pendingHigh_ = ch;   // 이모지는 앞 글자가 먼저 오므로 뒤 글자가 올 때까지 기다림
+        return;
+    }
+    else if (IsLowSurrogate(ch)) {
+        if (pendingHigh_ == 0) return;   // 짝이 없는 뒤 글자는 버림
+
+        InsertAtCaret(std::wstring{ pendingHigh_, ch });
+        pendingHigh_ = 0;
+    }
     else if (ch >= 0x20 && ch != 0x7F) {
+        pendingHigh_ = 0;
         InsertAtCaret(std::wstring(1, ch));
     }
     else {

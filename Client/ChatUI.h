@@ -33,7 +33,7 @@ public:
 
 private:
     void LoadBitmaps();                          // 리소스의 이미지를 처음 그릴 때 한 번 로드
-    void InsertAtCaret(const std::wstring& text);   // 커서 위치에 글자를 끼워 넣고 커서를 뒤로 옮김
+    void InsertAtCaret(const std::wstring& text);   // 커서 위치에 글자를 끼워 넣고 커서를 뒤로 옮김, UTF-8 100바이트를 넘는 글자는 넣지 않음
 
     const ClientState& state_;
     SendFn             send_;
@@ -42,6 +42,7 @@ private:
     std::wstring       draft_;                 // 입력 중인 문장
     std::wstring       composing_;             // 한글 조합 중이라 아직 확정되지 않은 글자
     size_t             caret_ = 0;             // 커서 위치, draft_의 몇 번째 글자 앞인지
+    wchar_t            pendingHigh_ = 0;       // 이모지처럼 두 글자로 오는 문자의 앞 글자, 뒤 글자가 올 때까지 보관
     HBITMAP            iconBitmap_ = nullptr;      // 채팅 아이콘 이미지
     HBITMAP            windowBitmap_ = nullptr;    // 채팅창 이미지
     HBITMAP            bubbleBitmap_ = nullptr;    // 메시지 한 개의 말풍선 이미지
