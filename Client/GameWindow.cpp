@@ -347,6 +347,15 @@ void GameWindow_ApplyBattleProgress(const BattleProgress& progress)
 	GameWindow_Invalidate();
 }
 
+void GameWindow_ApplyBattleResult(const BattleResult& result)
+{
+	victory = (result.reason == 1); // reason == 1 -> 별 3개 달성, reason == 2 -> 시간 만료 
+	gameEnd = TRUE;
+	gameState = STATE_END;
+
+	GameWindow_Invalidate();
+}
+
 void GameWindow_ApplyManaState(const ManaState& state)
 {
 	mana = state.mana;

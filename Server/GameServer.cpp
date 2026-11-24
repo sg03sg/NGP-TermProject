@@ -145,12 +145,24 @@ void GameServer::WorkerLoop()
         const auto sendNow = Clock::now();
 
         if (sendNow >= nextStateSend) {
-            for (const auto& entry : battles_) {
+            for (const auto& entry : battles_) 
+            {
+                const Party* party = partyManager_.GetParty(entry.first); // 진행중인 파티의 전투만 전송 대상
+                if (!party || party->Status() != PartyStatus::Running) 
+                {
+                    continue;
+                }
+
                 const BattleState state = entry.second->BuildBattleState();
                 const BattleProgress progress = entry.second->BuildBattleProgress();
-
+          
                 dispatcher_.SendBattleState(state);
                 dispatcher_.SendBattleProgress(progress);
+                if (entry.second->IsFinished())
+                {
+                    const BattleResult result = entry.second->BuildBattleResult();
+                    dispatcher_.SendBattleResult(result);
+                }
             }
 
             // 밀린 횟수만큼 과거 상태를 연속 전송하지 않고,

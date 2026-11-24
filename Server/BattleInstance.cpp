@@ -24,7 +24,7 @@ bool BattleInstance::Initialize(const MapData& mapData, const std::vector<Player
     towers_.clear();
     vote_ = AbortVote{};
     //result_ = BattleResult{};
-    result_ = BattleOutcome{};
+    result_ = BattleResultState{};
     tick_ = 0;
     remainingMs_ = kBattleTimeLimitMs;
 
@@ -270,8 +270,11 @@ void BattleInstance::Update(uint32_t dtMs)
         return;
     }
 
-    const double dtSeconds =
-        static_cast<double>(dtMs) / 1000.0;
+    if (dtMs > remainingMs_)
+    {
+        dtMs = remainingMs_;
+    }
+    const double dtSeconds = static_cast<double>(dtMs) / 1000.0;
 
     // 기존 이동 로직은 200ms마다 speed만큼 이동했다.
     constexpr double oldUpdateSeconds = 0.2;
@@ -411,16 +414,9 @@ void BattleInstance::Update(uint32_t dtMs)
         unit.x = static_cast<int>(std::lround(entry.preciseX));
         unit.y = static_cast<int>(std::lround(entry.preciseY));
     }
-    // 서버 틱마다 남은 시간 감소 
-    if (dtMs >= remainingMs_)
-    {
-        remainingMs_ = 0u;
-    }
-    else {
-        remainingMs_ -= dtMs;
-    }
-
+    remainingMs_ -= dtMs;
     ++tick_;
+    CheckResult();
 }
 
 BattleState BattleInstance::BuildBattleState() const
@@ -523,5 +519,33 @@ BattleProgress BattleInstance::BuildBattleProgress() const
 
 void BattleInstance::CheckResult() 
 {
+    if (result_.finished) {
+        return;
+    }
 
+    const BattleProgress progress = BuildBattleProgress();
+
+    if (progress.stars == 3) {
+        result_.reason = 1;  // 별 3개 달성
+    }
+    else if (remainingMs_ == 0) {
+        result_.reason = 2;  // 시간 만료
+    }
+    else {
+        return;             // 전투 계속
+    }
+
+    result_.stars = progress.stars;
+    result_.destructionPct = progress.destructionPercent;
+    result_.finished = true;
+}
+
+BattleResult BattleInstance::BuildBattleResult() const
+{
+    BattleResult message{};
+    message.partyId = partyId_;
+    message.reason = result_.reason;
+    message.stars = result_.stars;
+    message.destructionPercent = result_.destructionPct;
+    return message;
 }

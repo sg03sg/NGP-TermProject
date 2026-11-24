@@ -40,6 +40,7 @@ public:
     void ApplyPartyState(const PartySnapshot& snap);              // 명단과 방장 교체
     void ApplyLobbyState(const std::vector<LobbyMapInfo>& maps);  // 로비 현황 교체
     void ApplyBattleInit(const BattleInit& message);
+    void EnterResult() { screen_ = ScreenState::Result; }
     const BattleInit& Battle() const { return battle_; }
     void Clear();                                                 // 로비 복귀 시 초기화
 

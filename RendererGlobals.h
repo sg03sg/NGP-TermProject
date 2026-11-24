@@ -30,7 +30,7 @@ extern BOOL isLoading;
 extern BOOL showGrid;
 extern BOOL showrange;
 extern BOOL showblock;
-extern BOOL gameend;
+extern BOOL gameEnd;
 extern BOOL victory;
 extern int loadingProgress;
 

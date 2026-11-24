@@ -633,7 +633,7 @@ static void DRAWENDScreen(HWND hWnd, HDC mDC, HDC paintDC)
         DeleteObject(hFont);
     }
 
-    else if (!victory && gameend)
+    else if (!victory && gameEnd)
     {
         SelectObject(paintDC, enddbmp);
         StretchBlt(mDC, 0, 0, bkrect.right, bkrect.bottom, paintDC, 0, 0, bmpendd.bmWidth, bmpendd.bmHeight, SRCCOPY);

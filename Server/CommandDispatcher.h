@@ -58,4 +58,6 @@ public:
     void SendBattleState(const BattleState& message);
 
     void SendBattleProgress(const BattleProgress& message);
+
+    void SendBattleResult(const BattleResult& message);
 };

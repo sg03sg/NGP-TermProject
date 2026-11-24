@@ -212,6 +212,28 @@ static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 		break;
 	}
 
+	case MessageType::BATTLE_RESULT: {
+		BattleResult result{};
+		if (!PacketCodec::Decode(packet, result)) {
+			printf("[오류] BATTLE_RESULT 해석 실패\n");
+			return;
+		}
+
+		if (!lobby || lobby->State().Screen() != ScreenState::Battle ||
+			result.partyId != lobby->State().Battle().partyId) {
+			return;
+		}
+
+		printf("[수신] BATTLE_RESULT partyId=%u reason=%u stars=%u\n",
+			result.partyId,
+			static_cast<unsigned>(result.reason),
+			static_cast<unsigned>(result.stars));
+
+		lobby->OnBattleResult();
+		GameWindow_ApplyBattleResult(result);
+		break;
+	}
+
 	default:
 		printf("[수신] 처리하지 않는 메시지 종류 %u (%zu바이트)\n", type, packet.size());
 		break;

@@ -35,3 +35,5 @@ void GameWindow_ApplyManaState(const ManaState& state);
 void GameWindow_ApplyBattleState(const BattleState& message);
 
 void GameWindow_ApplyBattleProgress(const BattleProgress& progress);
+
+void GameWindow_ApplyBattleResult(const BattleResult& result);
