@@ -56,4 +56,6 @@ public:
     void Dispatch(const Command& cmd);
 
     void SendBattleState(const BattleState& message);
+
+    void SendBattleProgress(const BattleProgress& message);
 };

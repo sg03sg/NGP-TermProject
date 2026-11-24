@@ -14,4 +14,6 @@ void Renderer_Shutdown(void);
 // 현재 게임 상태에 맞는 화면을 그린다. WM_PAINT 에서 BeginPaint 로 얻은 hDC 를 넘긴다.
 void Renderer_Paint(HWND hWnd, HDC hDC);
 
+void Renderer_SetBattleStars(int stars);
+
 #endif

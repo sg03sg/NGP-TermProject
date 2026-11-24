@@ -351,6 +351,13 @@ static void DrawShopScreen(HDC mDC) {
 
 }
 
+static int battleStars = -1;
+
+void Renderer_SetBattleStars(int stars)
+{
+    battleStars = stars;
+}
+
 static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
     if (hStageMap[stageIdx]) {
         HDC memDC = CreateCompatibleDC(mDC);
@@ -529,7 +536,11 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
     DeleteObject(blue_mana);
 
     //별
-    if (towercount[stageIdx] >= naturaltowercount[stageIdx] * 0.7f) {
+
+    const int totalTowers = naturaltowercount[stageIdx];
+    const int destroyedTowers = totalTowers - towercount[stageIdx];
+
+    if (totalTowers == 0 || destroyedTowers * 100 < totalTowers * 30) {
         // 첫 번째 별: 70% 이상일 때
         SelectObject(paintDC, hui5bmp);
         COLORREF ui5_back_color = GetPixel(paintDC, 0, 1);
@@ -542,7 +553,7 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
         TransparentBlt(mDC, uis[3].x, uis[3].y, uis[3].length, uis[3].height, paintDC, 0, 0, bmpui6.bmWidth, bmpui6.bmHeight, ui6_back_color);
     }
 
-    if (towercount[stageIdx] >= naturaltowercount[stageIdx] * 0.4f) {
+    if (totalTowers == 0 || destroyedTowers * 100 < totalTowers * 60) {
         // 두 번째 별: 40% 이상일 때
         SelectObject(paintDC, hui5bmp);
         COLORREF ui5_back_color = GetPixel(paintDC, 0, 1);

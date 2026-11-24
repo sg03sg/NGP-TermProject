@@ -141,6 +141,7 @@ void GameWindow_EnterBattle(const BattleInit& message, uint32_t myPlayerId)
 {
 	const int stageIdx = static_cast<int>(message.mapId) - 1;
 	if (stageIdx < 0 || stageIdx >= 3) return;
+	Renderer_SetBattleStars(0);
 
 	// 이전 전투의 구조물, 병력, 효과 비우기
 	gameBattle.ClearUnits();
@@ -290,6 +291,7 @@ void GameWindow_ApplyBattleState(const BattleState& message)
 
 	const int stageIdx = static_cast<int>(gameState) - static_cast<int>(STATE_STAGE1);
 	if (stageIdx >= 0 && stageIdx < 3) {
+		// 1. 서버가 보낸 모든 건물의 HP와 active를 먼저 갱신한다.
 		for (const StructureStateInfo& state : message.structures) {
 			if (state.structureId == 0 || state.maxHp == 0 ||
 				state.maxHp > INT_MAX || state.hp > state.maxHp) {
@@ -315,8 +317,33 @@ void GameWindow_ApplyBattleState(const BattleState& message)
 			for (int i = 0; i < infernoCount[stageIdx]; ++i)
 				applyHp(infernos[stageIdx][i]);
 		}
+
+		int remainingTowers = 0;
+
+		for (int i = 0; i < cannonCount[stageIdx]; ++i) {
+			if (cannons[stageIdx][i].active) ++remainingTowers;
+		}
+
+		for (int i = 0; i < mortarCount[stageIdx]; ++i) {
+			if (mortars[stageIdx][i].active) ++remainingTowers;
+		}
+
+		for (int i = 0; i < infernoCount[stageIdx]; ++i) {
+			if (infernos[stageIdx][i].active) ++remainingTowers;
+		}
+
+		towercount[stageIdx] = remainingTowers;
 	}
 
+	GameWindow_Invalidate();
+}
+
+void GameWindow_ApplyBattleProgress(const BattleProgress& progress)
+{
+	const int seconds = progress.remainingSeconds;
+	wsprintf(timeStr, TEXT("%02d:%02d"), seconds / 60, seconds % 60);
+
+	Renderer_SetBattleStars(progress.stars);
 	GameWindow_Invalidate();
 }
 

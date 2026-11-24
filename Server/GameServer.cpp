@@ -146,10 +146,11 @@ void GameServer::WorkerLoop()
 
         if (sendNow >= nextStateSend) {
             for (const auto& entry : battles_) {
-                const BattleState message =
-                    entry.second->BuildBattleState();
+                const BattleState state = entry.second->BuildBattleState();
+                const BattleProgress progress = entry.second->BuildBattleProgress();
 
-                dispatcher_.SendBattleState(message);
+                dispatcher_.SendBattleState(state);
+                dispatcher_.SendBattleProgress(progress);
             }
 
             // 밀린 횟수만큼 과거 상태를 연속 전송하지 않고,
@@ -162,8 +163,7 @@ void GameServer::WorkerLoop()
 
         // 6. 기존 로비 방송
         const uint64_t nowMs = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                Clock::now().time_since_epoch()).count());
+            std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now().time_since_epoch()).count());
 
         if (kEnableLobbyBroadcast &&
             lobbyBroadcaster_.ShouldSend(nowMs)) {

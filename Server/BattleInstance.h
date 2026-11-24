@@ -140,7 +140,7 @@ public:
     VoteOutcome TallyVote();     // 과반 집계와 확정
     BattleState BuildBattleState() const;
     //Snapshot BuildBattleState() const;                                             // 병력·구조물 상태 복사
-    Snapshot BuildBattleProgress() const;                                          // 남은 시간·파괴율·별
+    BattleProgress BuildBattleProgress() const;                                          // 남은 시간·파괴율·별
     //Unit* SpawnUnit(uint32_t ownerId, UnitType type,int x, int y, const UnitStats& stats);
     Unit* FindUnit(int id);
     int CountUnits(UnitType type) const;

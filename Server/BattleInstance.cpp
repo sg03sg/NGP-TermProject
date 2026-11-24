@@ -145,41 +145,6 @@ Result BattleInstance::TrySpawnUnit(
     return result;
 }
 
-// 기존 Unit.cpp에 있던 SpawnUnit,FindUnit,CountUnits,ClearUnits를 이동 완료
-
-//Unit* BattleInstance::SpawnUnit(
-//    uint32_t ownerId, UnitType type,
-//    int x, int y, const UnitStats& stats)
-//{
-//    if (ownerId == 0 ||
-//        type < UnitType::Barbarian ||
-//        type > UnitType::Giant ||
-//        nextUnitId > INT_MAX) {
-//        return nullptr;
-//    }
-//
-//    if (CountUnits(type) >= MAX_UNITS) {
-//        return nullptr;
-//    }
-//
-//    BattleUnit entry{
-//        ownerId,
-//        Unit(static_cast<int>(nextUnitId), type, x, y, stats)
-//    };
-//
-//    auto position = units.begin();
-//
-//    while (position != units.end() &&
-//        position->unit.GetType() <= type) {
-//        ++position;
-//    }
-//
-//    position = units.insert(position, entry);
-//    ++nextUnitId;
-//
-//    return &position->unit;
-//}
-
 Unit* BattleInstance::FindUnit(int id)
 {
     for (BattleUnit& entry : units) {
@@ -446,6 +411,14 @@ void BattleInstance::Update(uint32_t dtMs)
         unit.x = static_cast<int>(std::lround(entry.preciseX));
         unit.y = static_cast<int>(std::lround(entry.preciseY));
     }
+    // 서버 틱마다 남은 시간 감소 
+    if (dtMs >= remainingMs_)
+    {
+        remainingMs_ = 0u;
+    }
+    else {
+        remainingMs_ -= dtMs;
+    }
 
     ++tick_;
 }
@@ -504,4 +477,51 @@ BattleState BattleInstance::BuildBattleState() const
         static_cast<uint16_t>(message.structures.size());
 
     return message;
+}
+
+BattleProgress BattleInstance::BuildBattleProgress() const
+{
+    BattleProgress progress{};
+    progress.partyId = partyId_;
+
+    progress.remainingSeconds = static_cast<uint16_t>((remainingMs_ + 999u) / 1000u);
+    
+    const size_t totalTowers = towers_.size();
+    size_t destroyedTowers = 0;
+
+    for (const Tower& tower : towers_) 
+    {
+        if (tower.destroyed) 
+        {
+            ++destroyedTowers;
+        }
+    }
+
+    // 전체 파괴율에는 마을회관도 건물 한 개로 포함한다.
+    const size_t totalBuildings = totalTowers + 1;
+    size_t destroyedBuildings = destroyedTowers;
+
+    if (townHall_.destroyed) 
+    {
+        ++destroyedBuildings;
+    }
+
+    progress.destructionPercent = static_cast<uint8_t>(destroyedBuildings * 100 / totalBuildings);
+
+    if (townHall_.destroyed) {
+        progress.stars = 3;
+    }
+    else if (totalTowers > 0 && destroyedTowers * 100 >= totalTowers * 60) {
+        progress.stars = 2;
+    }
+    else if (totalTowers > 0 && destroyedTowers * 100 >= totalTowers * 30) {
+        progress.stars = 1;
+    }
+
+    return progress;
+}
+
+void BattleInstance::CheckResult() 
+{
+
 }

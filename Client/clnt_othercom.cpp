@@ -196,6 +196,22 @@ static void HandlePacket(const PacketCodec::Packet& packet, LocalPlayer& player)
 		break;
 	}
 
+	case MessageType::BATTLE_PROGRESS: {
+		BattleProgress progress{};
+		if (!PacketCodec::Decode(packet, progress)) {
+			printf("[오류] BATTLE_PROGRESS 해석 실패\n");
+			return;
+		}
+
+		if (!lobby || lobby->State().Screen() != ScreenState::Battle ||
+			progress.partyId != lobby->State().Battle().partyId) {
+			return;
+		}
+
+		GameWindow_ApplyBattleProgress(progress);
+		break;
+	}
+
 	default:
 		printf("[수신] 처리하지 않는 메시지 종류 %u (%zu바이트)\n", type, packet.size());
 		break;

@@ -79,6 +79,22 @@ void CommandDispatcher::SendBattleState(const BattleState& message)
     SendToPlayers(party->Members(), packet);
 }
 
+void CommandDispatcher::SendBattleProgress(const BattleProgress& message)
+{
+    const Party* party = server_.GetPartyManager().GetParty(message.partyId);
+    if (!party || party->Status() != PartyStatus::Running) {
+        return;
+    }
+
+    const PacketCodec::Packet packet = PacketCodec::Encode(message, 0);
+    if (packet.empty()) {
+        std::cout << "[BATTLE_PROGRESS] Encode failed\n";
+        return;
+    }
+
+    SendToPlayers(party->Members(), packet);
+}
+
 PlayerId CommandDispatcher::PlayerOf(int sessionId) const
 {
     auto it = sessionToPlayer_.find(sessionId);
