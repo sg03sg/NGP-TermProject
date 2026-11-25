@@ -4,6 +4,7 @@
 #include "PartyUI.h"
 #include "../resource.h"
 #include "../RendererGlobals.h"
+#include <algorithm>
 #include <cstdio>
 
 namespace {
@@ -26,6 +27,24 @@ namespace {
     constexpr int kInputHeight = 44;
     constexpr int kInputPadding = 8;
 
+    // 채팅창 이미지 안쪽의 메시지 목록 영역
+    constexpr int kLogLeft = 20;
+    constexpr int kLogTop = 60;
+    constexpr int kLogWidth = 320;
+    constexpr int kLogHeight = 340;
+
+    // 말풍선 이미지는 300x60, 세로로 늘려야 할 때 꼬리가 있는 위쪽과 모서리가 있는 아래쪽은 그대로 두고 가운데 몇 줄만 늘림
+    constexpr int kBubbleWidth = 300;
+    constexpr int kBubbleHeight = 60;
+    constexpr int kBubbleTopRows = 37;
+    constexpr int kBubbleStretchRows = 5;
+    constexpr int kBubbleBottomRows = kBubbleHeight - kBubbleTopRows - kBubbleStretchRows;
+    constexpr int kBubbleTextLeft = 20;     // 말풍선 왼쪽 꼬리와 여백을 뺀 글자 시작 위치
+    constexpr int kBubbleTextWidth = 268;
+    constexpr int kBubblePadding = 8;
+    constexpr int kNameHeight = 18;
+    constexpr int kEntryGap = 8;
+
     constexpr size_t kMaxChatBytes = 100;   // 계획서의 채팅 본문 제한, 서버로 보내는 UTF-8 바이트 수 기준
 
     bool IsHighSurrogate(wchar_t ch) { return ch >= 0xD800 && ch <= 0xDBFF; }
@@ -44,15 +63,6 @@ namespace {
         }
         return bytes;
     }
-    std::string WideToUtf8(const std::wstring& text)
-    {
-        if (text.empty()) return std::string();
-        const int length = WideCharToMultiByte(CP_UTF8, 0, text.data(), (int)text.size(), nullptr, 0, nullptr, nullptr);
-        if (length <= 0) return std::string();
-        std::string utf8(length, '\0');
-        WideCharToMultiByte(CP_UTF8, 0, text.data(), (int)text.size(), &utf8[0], length, nullptr, nullptr);
-        return utf8;
-    }
 
     // 콘솔에 보여주기 위해 시스템 코드 페이지 문자열로 바꿈
     std::string WideToConsole(const std::wstring& text)
@@ -63,6 +73,152 @@ namespace {
         std::string ansi(length, '\0');
         WideCharToMultiByte(CP_ACP, 0, text.data(), (int)text.size(), &ansi[0], length, nullptr, nullptr);
         return ansi;
+    }
+
+    // 영역 너비에 맞춰 줄바꿈, 가능하면 공백에서 끊고 공백이 없는 긴 글은 글자 단위로 끊음
+    std::vector<std::wstring> WrapText(HDC hdc, const std::wstring& text, int width)
+    {
+        std::vector<std::wstring> lines;
+        size_t start = 0;
+
+        while (start < text.size()) {
+            int fit = 0;
+            SIZE size = { 0, 0 };
+            GetTextExtentExPointW(hdc, text.c_str() + start, static_cast<int>(text.size() - start), width, &fit, nullptr, &size);
+            if (fit <= 0) fit = 1;   // 한 글자도 들어가지 않아도 반드시 진행
+
+            size_t count = static_cast<size_t>(fit);
+            bool atSpace = false;
+
+            if (start + count < text.size()) {
+                const size_t space = text.rfind(L' ', start + count);   // 들어가는 범위 안의 마지막 공백
+                if (space != std::wstring::npos && space > start) {
+                    count = space - start;
+                    atSpace = true;
+                }
+                else if (count > 1 && IsHighSurrogate(text[start + count - 1])) {
+                    --count;   // 이모지의 앞 글자만 윗줄에 남지 않도록 함
+                }
+            }
+
+            lines.push_back(text.substr(start, count));
+            start += count + (atSpace ? 1 : 0);
+        }
+
+        if (lines.empty()) lines.push_back(std::wstring());
+        return lines;
+    }
+
+    // 말풍선 이미지를 원하는 높이로 그림, 마젠타를 투명색으로 사용
+    void DrawBubble(HDC hdc, HBITMAP bubble, int x, int y, int height)
+    {
+        if (bubble == nullptr) return;
+
+        HDC memDC = CreateCompatibleDC(hdc);
+        HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, bubble);
+
+        const int stretchHeight = height - kBubbleTopRows - kBubbleBottomRows;
+        TransparentBlt(hdc, x, y, kBubbleWidth, kBubbleTopRows, memDC, 0, 0, kBubbleWidth, kBubbleTopRows, kTransparentColor);
+        if (stretchHeight > 0)
+            TransparentBlt(hdc, x, y + kBubbleTopRows, kBubbleWidth, stretchHeight, memDC, 0, kBubbleTopRows, kBubbleWidth, kBubbleStretchRows, kTransparentColor);
+        TransparentBlt(hdc, x, y + kBubbleTopRows + (stretchHeight > 0 ? stretchHeight : 0), kBubbleWidth, kBubbleBottomRows,
+            memDC, 0, kBubbleTopRows + kBubbleStretchRows, kBubbleWidth, kBubbleBottomRows, kTransparentColor);
+
+        SelectObject(memDC, oldBitmap);
+        DeleteDC(memDC);
+    }
+
+    // 받은 채팅 내역을 최신 것이 아래에 오도록 영역 안에 말풍선으로 그림
+    // 이름은 말풍선 위쪽에, 본문은 그 아래에 영역 너비에 맞춰 줄바꿈하며 보낸 사람이 나이면 이름 색을 다르게 표시
+    // 서버가 보내는 알림처럼 보낸 사람이 없는 줄은 말풍선 없이 회색 글씨로 가운데에 표시
+    void DrawChatLog(HDC hdc, const RECT& area, HBITMAP bubble, const std::vector<ChatEntry>& log, uint32_t myPlayerId)
+    {
+        if (log.empty()) return;
+
+        HFONT textFont = CreateFontW(17, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"맑은 고딕");
+        HFONT nameFont = CreateFontW(15, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"맑은 고딕");
+        HFONT oldFont = (HFONT)SelectObject(hdc, textFont);
+        SetBkMode(hdc, TRANSPARENT);
+
+        TEXTMETRICW metric;
+        GetTextMetricsW(hdc, &metric);
+        const int lineHeight = metric.tmHeight;
+
+        const int areaWidth = area.right - area.left;
+        const int areaHeight = area.bottom - area.top;
+
+        struct Item {
+            const ChatEntry* entry;
+            std::wstring     name;
+            std::wstring     text;
+            std::vector<std::wstring> lines;   // 너비에 맞춰 나눈 본문
+            int              textHeight;
+            int              height;
+            bool             notice;
+        };
+
+        // 최신 것부터 거꾸로 영역이 찰 때까지 높이를 계산해 모음
+        std::vector<Item> items;
+        int total = 0;
+        for (size_t i = log.size(); i-- > 0 && total <= areaHeight; ) {
+            Item item;
+            item.entry = &log[i];
+            item.notice = log[i].senderId == 0;
+            item.name = Utf8ToWide(log[i].name);
+            item.text = Utf8ToWide(log[i].text);
+
+            const int width = item.notice ? areaWidth - 20 : kBubbleTextWidth;
+            item.lines = WrapText(hdc, item.text, width);
+            item.textHeight = static_cast<int>(item.lines.size()) * lineHeight;
+            item.height = item.notice ? item.textHeight + 6 : (std::max)(kBubbleHeight, kBubblePadding * 2 + kNameHeight + item.textHeight);
+
+            total += item.height + kEntryGap;
+            items.push_back(std::move(item));
+        }
+
+        const int saved = SaveDC(hdc);
+        IntersectClipRect(hdc, area.left, area.top, area.right, area.bottom);
+
+        int y = area.bottom - kEntryGap;
+        for (const Item& item : items) {
+            y -= item.height;
+
+            if (item.notice) {
+                SelectObject(hdc, textFont);
+                SetTextColor(hdc, RGB(150, 150, 150));
+                for (size_t k = 0; k < item.lines.size(); ++k) {
+                    RECT line = { area.left + 10, y + 3 + static_cast<int>(k) * lineHeight, area.right - 10, y + 3 + static_cast<int>(k + 1) * lineHeight };
+                    DrawTextW(hdc, item.lines[k].c_str(), -1, &line, DT_CENTER | DT_SINGLELINE | DT_NOPREFIX | DT_NOCLIP);
+                }
+            }
+            else {
+                const int x = area.left + (areaWidth - kBubbleWidth) / 2;
+                DrawBubble(hdc, bubble, x, y, item.height);
+
+                const bool mine = item.entry->senderId == myPlayerId;
+                RECT nameRect = { x + kBubbleTextLeft, y + kBubblePadding, x + kBubbleTextLeft + kBubbleTextWidth, y + kBubblePadding + kNameHeight };
+                SelectObject(hdc, nameFont);
+                SetTextColor(hdc, mine ? RGB(255, 220, 120) : RGB(169, 187, 223));
+                DrawTextW(hdc, item.name.c_str(), -1, &nameRect, DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
+
+                SelectObject(hdc, textFont);
+                SetTextColor(hdc, RGB(255, 255, 255));
+                for (size_t k = 0; k < item.lines.size(); ++k) {
+                    const int lineTop = y + kBubblePadding + kNameHeight + static_cast<int>(k) * lineHeight;
+                    RECT line = { x + kBubbleTextLeft, lineTop, x + kBubbleTextLeft + kBubbleTextWidth, lineTop + lineHeight };
+                    DrawTextW(hdc, item.lines[k].c_str(), -1, &line, DT_SINGLELINE | DT_NOPREFIX | DT_NOCLIP);
+                }
+            }
+
+            y -= kEntryGap;
+        }
+
+        RestoreDC(hdc, saved);
+        SelectObject(hdc, oldFont);
+        DeleteObject(textFont);
+        DeleteObject(nameFont);
     }
 
     // 입력 중인 문장을 한 줄로 표시, 앞쪽 글자 + 조합 중인 글자 + 뒤쪽 글자 순서로 이어 그림
@@ -292,7 +448,7 @@ bool ChatUI::OnEnterKey()
     return true;
 }
 
-void ChatUI::Draw(HDC hdc, const std::vector<ChatMessage>& chatLog)
+void ChatUI::Draw(HDC hdc, const std::vector<ChatEntry>& chatLog)
 {
     LoadBitmaps();
 
@@ -310,6 +466,9 @@ void ChatUI::Draw(HDC hdc, const std::vector<ChatMessage>& chatLog)
         window.left + kInputLeft + kInputWidth - kInputPadding, window.top + kInputTop + kInputHeight };
     DrawDraft(hdc, input, draft_.substr(0, caret_), composing_, draft_.substr(caret_));
 
-    // 메시지 목록은 서버가 채팅을 방송하는 작업 후, 말풍선 이미지 위에 이름과 본문으로 표시
-    (void)chatLog;
+    // 받은 채팅 내역을 말풍선으로 표시
+    const RECT logArea = {
+        window.left + kLogLeft, window.top + kLogTop,
+        window.left + kLogLeft + kLogWidth, window.top + kLogTop + kLogHeight };
+    DrawChatLog(hdc, logArea, bubbleBitmap_, chatLog, state_.MyPlayerId());
 }

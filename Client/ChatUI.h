@@ -25,7 +25,7 @@ public:
     void OnChar(wchar_t ch);                                       // 확정된 글자를 커서 위치에 더하고 백스페이스는 커서 앞 글자를 지운다
     void OnComposition(const std::wstring& result, const std::wstring& composing);   // 한글 IME 입력, 확정된 글자는 커서 위치에 더하고 조합 중인 글자는 따로 보관
     void OnKeyDown(WPARAM key);                                    // 좌우 방향키로 커서 이동
-    void Draw(HDC hdc, const std::vector<ChatMessage>& chatLog);   // 아이콘과 열린 채팅창 표시, 메시지 목록 표시는 서버 채팅 방송 구현 후 추가
+    void Draw(HDC hdc, const std::vector<ChatEntry>& chatLog);     // 아이콘과 열린 채팅창, 받은 채팅 내역을 말풍선으로 표시
 
     bool IsOpen() const { return open_; }
     RECT ToggleButtonRect() const;   // 채팅 아이콘의 화면 좌표, 파티 대기창과 전투 화면에서 위치가 다름

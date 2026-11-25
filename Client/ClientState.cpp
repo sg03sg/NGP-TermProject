@@ -32,6 +32,7 @@ void ClientState::Clear()
     // 로비 복귀: myPlayerId_와 lobbyMaps_는 유지
     party_ = PartySnapshot{};
     battle_ = BattleInit{};
+    chatLog_.clear();   // 파티를 떠나면 채팅 내역도 비움
     screen_ = ScreenState::Lobby;
 }
 
@@ -39,4 +40,11 @@ void ClientState::ApplyBattleInit(const BattleInit& message)
 {
     battle_ = message;
     screen_ = ScreenState::Battle;
+}
+
+void ClientState::AppendChat(const ChatEntry& entry)
+{
+    chatLog_.push_back(entry);
+    if (chatLog_.size() > kMaxChatLog)
+        chatLog_.erase(chatLog_.begin());
 }

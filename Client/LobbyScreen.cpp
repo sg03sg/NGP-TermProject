@@ -9,6 +9,24 @@ namespace {
         if (packet.size() < PACKET_HEADER_SIZE) return 0;
         return (uint16_t)((packet[4] << 8) | packet[5]);
     }
+
+    // 파티 명단에서 보낸 사람의 이름을 찾음, 이미 나간 사람처럼 명단에 없으면 번호로 표시
+    std::string SenderName(const ClientState& state, uint32_t senderId)
+    {
+        for (const PartyMemberInfo& member : state.Party().members)
+            if (member.playerId == senderId) return member.name;
+        return WideToUtf8(L"플레이어 ") + std::to_string(senderId);
+    }
+
+    // 채팅 전송이 거절되었을 때 채팅창에 보여줄 알림
+    std::string ChatRejectText(uint16_t errorCode)
+    {
+        switch (errorCode) {
+        case 5:  return WideToUtf8(L"참가 중인 파티가 없어 채팅을 보낼 수 없습니다.");
+        case 7:  return WideToUtf8(L"도배 방지를 위해 잠시 채팅을 보낼 수 없습니다. 5초 뒤에 다시 보내세요.");
+        default: return WideToUtf8(L"채팅을 보내지 못했습니다.");
+        }
+    }
 }
 
 LobbyScreen::LobbyScreen(MapUI::SendFn send, MapUI::RequestIdFn nextRequestId) : state_(), mapUI_(state_, send, nextRequestId), partyUI_(state_, send, nextRequestId)
@@ -82,11 +100,36 @@ bool LobbyScreen::HandlePacketImpl(const PacketCodec::Packet& packet)
         }
         printf("[수신] REQUEST_REJECT: 요청 종류 %u 거절, 사유 %u\n", rejected.rejectedType, rejected.errorCode);
 
-        if (rejected.rejectedType == static_cast<uint16_t>(MessageType::JOIN_MAP))
+        if (rejected.rejectedType == static_cast<uint16_t>(MessageType::CHAT_SEND)) {
+            ChatEntry notice;   // 보낸 사람이 0이면 채팅창에 알림 줄로 표시
+            notice.text = ChatRejectText(rejected.errorCode);
+
+            // 막힌 동안 반복해서 시도해도 같은 알림이 줄줄이 쌓이지 않도록 바로 앞 줄이 같은 알림이면 추가하지 않음
+            const std::vector<ChatEntry>& log = state_.ChatLog();
+            const bool repeated = !log.empty() && log.back().senderId == 0 && log.back().text == notice.text;
+            if (!repeated) state_.AppendChat(notice);
+        }
+        else if (rejected.rejectedType == static_cast<uint16_t>(MessageType::JOIN_MAP))
             mapUI_.OnRejected(header.requestId, rejected.errorCode);
         else if (rejected.rejectedType == static_cast<uint16_t>(MessageType::LEAVE_PARTY) ||
             rejected.rejectedType == static_cast<uint16_t>(MessageType::START_GAME))
             partyUI_.OnRejected(header.requestId, rejected.errorCode);
+        return true;
+    }
+
+    case MessageType::CHAT_MESSAGE: {
+        ChatMessage chat;
+        if (!PacketCodec::Decode(packet, chat)) {
+            printf("[오류] CHAT_MESSAGE 해석 실패\n");
+            return true;
+        }
+
+        ChatEntry entry;
+        entry.senderId = chat.senderId;
+        entry.name = SenderName(state_, chat.senderId);
+        entry.text = chat.text;
+        state_.AppendChat(entry);
+        printf("[수신] CHAT_MESSAGE: 보낸 사람 %u, 본문 %zu바이트\n", chat.senderId, chat.text.size());
         return true;
     }
 

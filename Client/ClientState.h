@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <cstdint>
+#include <string>
 #include <vector>
 #include "Message.h"       // PartyState
 #include "LobbyState.h"    // LobbyMapInfo (LOBBY_STATE)
@@ -17,6 +18,14 @@ enum class ScreenState : uint8_t {
 
 using PartySnapshot = PartyState;   // message.h의 PartyState
 
+// 채팅창에 보여줄 한 줄, senderId가 0이면 서버가 보낸 것이 아니라 클라이언트가 만든 알림
+struct ChatEntry {
+    PlayerId    senderId = 0;
+    std::string name;    // 보낸 사람 이름, UTF-8
+    std::string text;    // 본문, UTF-8
+};
+
+constexpr size_t kMaxChatLog = 100;   // 클라이언트가 보관하는 채팅 줄 수, 서버가 보관하는 내역 수와 같음
 class ClientState {
 private:
     // 로비·파티 ----
@@ -28,7 +37,8 @@ private:
 
 
 
-    // 소환·마나·채팅
+    // 채팅
+    std::vector<ChatEntry>    chatLog_;                          // 받은 채팅 내역
 
     // 전투 상태·결과
 
@@ -40,7 +50,9 @@ public:
     void ApplyPartyState(const PartySnapshot& snap);              // 명단과 방장 교체
     void ApplyLobbyState(const std::vector<LobbyMapInfo>& maps);  // 로비 현황 교체
     void ApplyBattleInit(const BattleInit& message);
+    void AppendChat(const ChatEntry& entry);                      // 채팅 한 줄 추가, 넘치면 오래된 것부터 삭제
     const BattleInit& Battle() const { return battle_; }
+    const std::vector<ChatEntry>& ChatLog() const { return chatLog_; }
     void Clear();                                                 // 로비 복귀 시 초기화
 
 

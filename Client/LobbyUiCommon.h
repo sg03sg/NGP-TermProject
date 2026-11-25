@@ -35,6 +35,18 @@ inline std::wstring Utf8ToWide(const std::string& text)
     return wide;
 }
 
+// UTF-16 문자열을 UTF-8로 바꿈, 서버와 주고받는 문자열이 UTF-8이므로 소스의 한글을 서버 규격에 맞춰 만들 때 사용
+// 좁은 문자열 리터럴은 컴파일러가 시스템 코드 페이지로 저장하므로 한글은 와이드 리터럴로 쓰고 이 함수로 바꿈
+inline std::string WideToUtf8(const std::wstring& text)
+{
+    if (text.empty()) return std::string();
+    const int length = WideCharToMultiByte(CP_UTF8, 0, text.data(), (int)text.size(), nullptr, 0, nullptr, nullptr);
+    if (length <= 0) return std::string();
+    std::string utf8(length, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, text.data(), (int)text.size(), &utf8[0], length, nullptr, nullptr);
+    return utf8;
+}
+
 inline void DrawLabel(HDC hdc, const RECT& area, const std::wstring& text, COLORREF color, int fontHeight, UINT format, bool bold = false)
 {
     HFONT font = CreateFontW(fontHeight, 0, 0, 0, bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
