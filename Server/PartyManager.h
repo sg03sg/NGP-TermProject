@@ -12,7 +12,8 @@ enum class PartyError : uint16_t {
     PartyFull,
     AlreadyInParty,
     NotInParty,
-    NotLeader
+    NotLeader,
+    ChatBlocked    // 도배로 채팅 전송이 막힘
 };
 
 // 참가·퇴장 결과

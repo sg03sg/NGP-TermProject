@@ -68,4 +68,38 @@ void Party::Reset()
     members_.clear();
     leaderId_ = kInvalidPlayerId;
     status_ = PartyStatus::Waiting;
+    chatLog_.clear();           // 파티가 해체되면 채팅 내역도 함께 삭제
+    chatThrottle_.clear();
+}
+
+ChatResult Party::AppendChat(PlayerId pid, const std::string& text, ChatClock::time_point now)
+{
+    if (!Has(pid)) return ChatResult::NotMember;
+    if (text.empty() || text.size() > kMaxChatBytes) return ChatResult::InvalidText;
+
+    ChatThrottle& throttle = chatThrottle_[pid];
+    if (now < throttle.blockedUntil) return ChatResult::Blocked;   // 막힌 시간 안에는 모두 거절
+
+    // 판정 시간보다 오래된 기록은 버림
+    const std::chrono::milliseconds window(kChatBurstWindowMs);
+    while (!throttle.recent.empty() && now - throttle.recent.front() >= window)
+        throttle.recent.pop_front();
+
+    // 판정 시간 안에 이미 한도만큼 보냈다면 이번 건이 한도 초과이므로 막고 이 건도 저장하지 않음
+    if (throttle.recent.size() >= kChatBurstLimit) {
+        throttle.blockedUntil = now + std::chrono::milliseconds(kChatBlockMs);
+        throttle.recent.clear();
+        return ChatResult::Blocked;
+    }
+
+    throttle.recent.push_back(now);
+
+    ChatEntry entry;
+    entry.senderId = pid;
+    entry.text = text;
+    chatLog_.push_back(std::move(entry));
+    if (chatLog_.size() > kMaxChatHistory)
+        chatLog_.erase(chatLog_.begin());   // 가장 오래된 내역부터 삭제
+
+    return ChatResult::Ok;
 }

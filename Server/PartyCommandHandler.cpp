@@ -22,10 +22,10 @@ void PartyCommandHandler::HandleJoinMap(const Command& cmd, PlayerId pid)
         return;
     }
 
-    // 새 참가자를 포함한 파티원 전원에게 같은 명단을 보냄.
-    // (+) 채팅: 뒤늦게 들어온 사람에게 지금까지의 채팅 내역을 보낸다.
-
+    // 새 참가자를 포함한 파티원 전원에게 같은 명단을 보낸 뒤, 뒤늦게 들어온 사람에게만 지금까지의 채팅 내역을 보낸다.
+    // 내역의 보낸 사람 이름을 명단에서 찾으므로 명단이 먼저 도착해야 한다.
     BroadcastPartyState(r.partyId);
+    SendChatHistory(pid, r.partyId);
     if (ctx_.onLobbyChanged) ctx_.onLobbyChanged();
 }
 
@@ -109,4 +109,19 @@ void PartyCommandHandler::BroadcastPartyState(PartyId partyId)
 
     const Packet packet = PacketCodec::Encode(msg, 0);
     if (ctx_.sendToPlayers) ctx_.sendToPlayers(ctx_.parties.MembersOf(partyId), packet);
+}
+
+void PartyCommandHandler::SendChatHistory(PlayerId pid, PartyId partyId)
+{
+    const Party* party = ctx_.parties.GetParty(partyId);
+    if (!party || !ctx_.sendToPlayer) return;
+
+    // 오래된 것부터 한 건씩 전송, 공통 이벤트와 같이 requestId는 0
+    for (const ChatEntry& entry : party->ChatLog()) {
+        ChatMessage msg;
+        msg.senderId = entry.senderId;
+        msg.text = entry.text;
+        msg.textLength = static_cast<uint16_t>(entry.text.size());
+        ctx_.sendToPlayer(pid, PacketCodec::Encode(msg, 0));
+    }
 }

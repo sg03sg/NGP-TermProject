@@ -19,13 +19,11 @@ namespace {
             << " 수신 " << cmd.packet.size() << "바이트, 처리 함수 미구현" << std::endl;
     }
 
-    // 계획서의 채팅 본문 제한, 패킷에 실리는 UTF-8 바이트 수 기준
-    constexpr size_t kMaxChatBytes = 100;
-
-    // 채팅 본문 검사: 비어 있지 않고, 길이 한도 이내이며, 올바른 UTF-8이고, 제어 문자가 없어야 함
+    // 채팅 본문 내용 검사: 비어 있지 않고, 올바른 UTF-8이고, 제어 문자가 없어야 함
+    // 길이 한도와 도배 검사는 Party::AppendChat이 한다.
     bool IsValidChatText(const std::string& text)
     {
-        if (text.empty() || text.size() > kMaxChatBytes) return false;
+        if (text.empty()) return false;
 
         size_t i = 0;
         while (i < text.size()) {
@@ -208,13 +206,33 @@ void CommandDispatcher::HandleChatSend(const Command& cmd)
         return;
     }
 
+    const PartyId partyId = parties.PartyOf(pid);
+    Party* party = parties.GetParty(partyId);
+    if (!party) return;
+
+    // 길이와 도배를 검사하고 파티의 채팅 내역에 저장
+    const ChatResult result = party->AppendChat(pid, request.text);
+    if (result == ChatResult::Blocked) {
+        // 도배로 막힌 사람에게는 사유를 알림
+        RequestRejected rejected;
+        rejected.rejectedType = static_cast<uint16_t>(MessageType::CHAT_SEND);
+        rejected.errorCode = static_cast<uint16_t>(PartyError::ChatBlocked);
+        SendToSession(cmd.sessionId, PacketCodec::Encode(rejected, header.requestId));
+        std::cout << "[CommandDispatcher] 플레이어 " << pid << ": 도배 제한으로 CHAT_SEND 거절" << std::endl;
+        return;
+    }
+    if (result != ChatResult::Ok) {
+        std::cout << "[CommandDispatcher] 플레이어 " << pid << ": 길이 초과 CHAT_SEND 무시 ("
+            << request.text.size() << "바이트)" << std::endl;
+        return;
+    }
+
     ChatMessage chat;
     chat.senderId = pid;
     chat.text = request.text;
     chat.textLength = static_cast<uint16_t>(chat.text.size());
 
     // 보낸 사람을 포함한 같은 파티 전체에 방송, 공통 이벤트이므로 requestId는 0을 사용한다.
-    const PartyId partyId = parties.PartyOf(pid);
     SendToPlayers(parties.MembersOf(partyId), PacketCodec::Encode(chat, 0));
 
     std::cout << "[CHAT_MESSAGE] partyId=" << partyId << " senderId=" << pid

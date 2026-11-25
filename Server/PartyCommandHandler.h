@@ -28,6 +28,7 @@ public:
 private:
     void SendRejected(PlayerId pid, MessageType rejectedType, PartyError error, uint32_t requestId);
     void BroadcastPartyState(PartyId partyId);                 // 파티원 전원에게 PARTY_STATE
+    void SendChatHistory(PlayerId pid, PartyId partyId);       // 새 참가자에게만 지금까지의 채팅 내역을 전송
 
     Context ctx_;
 };
