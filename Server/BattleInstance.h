@@ -104,6 +104,15 @@ struct MapData {
     Structure          townHall;
 };
 
+struct BattleArrow {
+    double x;
+    double y;
+    double targetX;
+    double targetY;
+    int targetIndex;     
+    uint32_t damage;
+};
+
 
 class BattleInstance {
 private:
@@ -118,6 +127,7 @@ private:
     uint32_t                 tick_ = 0;         // 경과 틱 수
     uint32_t                 remainingMs_ = 0;  // 남은 제한 시간
     BattleResultState result_;
+    std::vector<BattleArrow> arrows_;
 
 public:
     explicit BattleInstance(PartyId partyId);
@@ -143,4 +153,6 @@ public:
     const std::vector<BattleUnit>& GetUnits() const;
     BattleInit BuildBattleInit() const;
     const PlayerState* FindPlayer(PlayerId pid) const;
+    void UpdateArrows(double dtSeconds);
+    void DamageStructure(int targetIndex, uint32_t damage);
 };

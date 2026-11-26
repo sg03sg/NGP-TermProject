@@ -7,6 +7,7 @@
 #include "LobbyUiCommon.h"
 #include <climits>
 #include <cstdio>
+#include <vector>
 
 namespace {
 	const TCHAR* WINDOW_CLASS = TEXT("ClientGameWindow");
@@ -71,6 +72,27 @@ namespace {
 			return DefWindowProc(hWnd, message, wParam, lParam);
 		}
 		return 0;
+	}
+
+	std::vector<ArrowEffect> networkArrowEffects;
+
+	void ApplyArrowPositions(const std::vector<ArrowStateInfo>& arrows)
+	{
+		networkArrowEffects.clear();
+
+		for (const ArrowStateInfo& state : arrows) {
+			ArrowEffect effect{};
+
+			// 서버 좌표는 중심, TransparentBlt가 받는 좌표는 그림의 왼쪽 위다.
+			effect.x = static_cast<float>(state.x) - tileHeight / 2.0f;
+			effect.y = static_cast<float>(state.y) - tileHeight / 2.0f;
+			effect.active = TRUE;
+
+			networkArrowEffects.push_back(effect);
+		}
+
+		arrowEffects = networkArrowEffects.data();
+		arrowEffectCount = static_cast<int>(networkArrowEffects.size());
 	}
 }
 
@@ -335,6 +357,7 @@ void GameWindow_ApplyBattleState(const BattleState& message)
 		towercount[stageIdx] = remainingTowers;
 	}
 
+	ApplyArrowPositions(message.arrows);
 	GameWindow_Invalidate();
 }
 

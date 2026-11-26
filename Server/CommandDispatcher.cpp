@@ -461,8 +461,7 @@ void CommandDispatcher::HandleStartGame(const Command& cmd)
 
     // 전투 생성과 보관은 BattleManager가 한다.
     BattleInstance* battle = nullptr;
-    const BattleCreateResult created = server_.GetBattleManager().CreateBattle(
-        party->Id(), map, party->Members(), battle);
+    const BattleCreateResult created = server_.GetBattleManager().CreateBattle(party->Id(), map, party->Members(), battle);
 
     if (created == BattleCreateResult::AlreadyExists) {
         reject(PartyError::StageLocked);

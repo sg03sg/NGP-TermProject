@@ -21,6 +21,7 @@ bool BattleInstance::Initialize(const MapData& mapData, const std::vector<Player
     mapDataId_ = mapData.id;
     players_.clear();
     ClearUnits();
+    arrows_.clear();
     towers_.clear();
     vote_ = AbortVote{};
     //result_ = BattleResult{};
@@ -247,8 +248,7 @@ BattleInit BattleInstance::BuildBattleInit() const
         message.structures.push_back(structure);
     }
 
-    message.structureCount =
-        static_cast<uint16_t>(message.structures.size());
+    message.structureCount = static_cast<uint16_t>(message.structures.size());
 
     return message;
 }
@@ -275,6 +275,7 @@ void BattleInstance::Update(uint32_t dtMs)
         dtMs = remainingMs_;
     }
     const double dtSeconds = static_cast<double>(dtMs) / 1000.0;
+    UpdateArrows(dtSeconds);
 
     // 기존 이동 로직은 200ms마다 speed만큼 이동했다.
     constexpr double oldUpdateSeconds = 0.2;
@@ -290,7 +291,6 @@ void BattleInstance::Update(uint32_t dtMs)
         int targetX = 0;
         int targetY = 0;
         int targetIndex = -1;
-        // BattleLogic::UpdateUnit에서 사용하던 논리 중심 (타일 31x22, 구조물 64x64).
         constexpr int unitCenterOffsetX = 31 / 2;
         constexpr int unitCenterOffsetY = 22 / 2;
         constexpr int structureCenterOffset = 32;
@@ -356,7 +356,9 @@ void BattleInstance::Update(uint32_t dtMs)
         // 사거리 경계의 부동소수점 오차까지 포함해 도착을 판정한다.
         if (nearestDistance <= attackRange + 1e-6)
         {
-            if (unit.GetType() != UnitType::Barbarian) {
+            if (unit.GetType() != UnitType::Barbarian &&
+                unit.GetType() != UnitType::Archer &&
+                unit.GetType() != UnitType::Giant) {
                 continue;
             }
 
@@ -371,19 +373,20 @@ void BattleInstance::Update(uint32_t dtMs)
                 }
             }
 
-            // targetIndex는 위에서 가장 가까운 구조물을 고를 때 정한 값이다.
-            // -1은 마을회관, 0 이상은 towers_의 인덱스다.
-            auto hit = [&](auto& structure) {
-                const uint32_t damage = static_cast<uint32_t>(unit.atk);
-                structure.hp = damage >= structure.hp ? 0u : structure.hp - damage;
-                structure.destroyed = (structure.hp == 0);
-                };
+            const uint32_t damage = static_cast<uint32_t>(unit.atk);
 
-            if (targetIndex == -1) {
-                hit(townHall_);
+            if (unit.GetType() == UnitType::Archer) {
+                arrows_.push_back({
+                    unitCenterX,
+                    unitCenterY,
+                    static_cast<double>(targetX) + structureCenterOffset,
+                    static_cast<double>(targetY) + structureCenterOffset,
+                    targetIndex,
+                    damage
+                    });
             }
             else {
-                hit(towers_[targetIndex]);
+                DamageStructure(targetIndex, damage);
             }
 
             // 기존 코드는 200ms 갱신을 10번 쉬고 다음 갱신에 다시 공격한다.
@@ -472,6 +475,15 @@ BattleState BattleInstance::BuildBattleState() const
     message.structureCount =
         static_cast<uint16_t>(message.structures.size());
 
+    for (const BattleArrow& arrow : arrows_) {
+        ArrowStateInfo state{};
+        state.x = static_cast<uint32_t>(std::lround(arrow.x));
+        state.y = static_cast<uint32_t>(std::lround(arrow.y));
+        message.arrows.push_back(state);
+    }
+
+    message.arrowCount = static_cast<uint16_t>(message.arrows.size());
+
     return message;
 }
 
@@ -548,4 +560,51 @@ BattleResult BattleInstance::BuildBattleResult() const
     message.stars = result_.stars;
     message.destructionPercent = result_.destructionPct;
     return message;
+}
+
+void BattleInstance::DamageStructure(int targetIndex, uint32_t damage)
+{
+    auto hit = [damage](auto& structure) {
+        if (structure.destroyed) return;
+
+        if (damage >= structure.hp) {
+            structure.hp = 0;
+            structure.destroyed = true;
+        }
+        else {
+            structure.hp -= damage;
+        }
+        };
+
+    if (targetIndex == -1) {
+        hit(townHall_);
+    }
+    else if (targetIndex >= 0 &&
+        static_cast<size_t>(targetIndex) < towers_.size()) {
+        hit(towers_[targetIndex]);
+    }
+}
+
+void BattleInstance::UpdateArrows(double dtSeconds)
+{
+    constexpr double arrowSpeed = 75.0;
+    const double step = arrowSpeed * dtSeconds;
+
+    auto arrow = arrows_.begin();
+
+    while (arrow != arrows_.end()) {
+        const double dx = arrow->targetX - arrow->x;
+        const double dy = arrow->targetY - arrow->y;
+        const double distance = std::hypot(dx, dy);
+
+        if (distance <= step) {
+            DamageStructure(arrow->targetIndex, arrow->damage);
+            arrow = arrows_.erase(arrow);
+            continue;
+        }
+
+        arrow->x += dx / distance * step;
+        arrow->y += dy / distance * step;
+        ++arrow;
+    }
 }

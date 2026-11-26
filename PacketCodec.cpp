@@ -238,7 +238,8 @@ Packet PacketCodec::Encode(const RequestRejected& message, uint32_t requestId)
 Packet PacketCodec::Encode(const BattleState& message, uint32_t requestId)
 {
     if (message.units.size() > UINT16_MAX ||
-        message.structures.size() > UINT16_MAX) {
+        message.structures.size() > UINT16_MAX ||
+        message.arrows.size() > UINT16_MAX) {
         return {};
     }
 
@@ -254,6 +255,11 @@ Packet PacketCodec::Encode(const BattleState& message, uint32_t requestId)
     Write(payload, static_cast<uint16_t>(message.structures.size()));
     for (const auto& structure : message.structures) {
         WriteFields(payload, structure.structureId, structure.hp, structure.maxHp);
+    }
+
+    Write(payload, static_cast<uint16_t>(message.arrows.size()));
+    for (const ArrowStateInfo& arrow : message.arrows) {
+        WriteFields(payload, arrow.x, arrow.y);
     }
 
     return BuildPacket(MessageType::BATTLE_STATE, requestId, payload);
@@ -420,6 +426,11 @@ namespace {
         return reader.ReadFields(structure.structureId, structure.hp, structure.maxHp);
     }
 
+    bool ReadRecord(PacketReader& reader, ArrowStateInfo& arrow)
+    {
+        return reader.ReadFields(arrow.x, arrow.y);
+    }
+
     // [요소 개수][각 요소의 데이터]
     template <typename Count, typename Item>
     bool ReadList(PacketReader& reader, Count& count, vector<Item>& items)
@@ -532,7 +543,8 @@ namespace {
     {
         return reader.ReadFields(message.partyId, message.serverTick)
             && ReadList(reader, message.unitCount, message.units)
-            && ReadList(reader, message.structureCount, message.structures);
+            && ReadList(reader, message.structureCount, message.structures)
+            && ReadList(reader, message.arrowCount, message.arrows);
     }
 
     bool Deserialize(PacketReader& reader, BattleProgress& message)

@@ -136,6 +136,10 @@ struct RequestRejected {
 };
 
 // 전투 동기화 및 종료 관련 구조체 ===============================================================
+struct ArrowStateInfo {
+	uint32_t x = 0;
+	uint32_t y = 0;
+};
 
 struct BattleState {
 	uint32_t partyId = 0;
@@ -144,6 +148,8 @@ struct BattleState {
 	vector<UnitStateInfo> units;
 	uint16_t structureCount = 0;
 	vector<StructureStateInfo> structures;
+	uint16_t arrowCount = 0;
+	std::vector<ArrowStateInfo> arrows;
 };
 
 struct BattleProgress {
