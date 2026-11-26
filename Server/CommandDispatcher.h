@@ -46,6 +46,7 @@ private:
     // 전투
     void HandleSpawn(const Command& cmd);
     void HandleAbortVoteCast(const Command& cmd);
+    void StartAbortVote(PartyId partyId, PlayerId leaverId);   // 남은 파티원에게 ABORT_VOTE_START 전송, 20초 타이머 시작
 
     // 좌표 테스트
     void HandleMarkerRequest(const Command& cmd);
@@ -60,4 +61,7 @@ public:
     void SendBattleProgress(const BattleProgress& message);
 
     void SendBattleResult(const BattleResult& message);
+
+    // 워커 루프에서 매 틱 호출: 진행 중인 중단 투표의 남은 시간을 줄이고 만료를 확인
+    void UpdateAbortVotes(uint32_t dtMs);
 };

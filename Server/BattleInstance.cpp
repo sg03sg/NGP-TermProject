@@ -126,8 +126,7 @@ Result BattleInstance::TrySpawnUnit(
     // 기존 병종별 정렬과 같은 병종 내 소환 순서를 유지한다.
     auto position = units.begin();
 
-    while (position != units.end() &&
-           position->unit.GetType() <= t) {
+    while (position != units.end() && position->unit.GetType() <= t) {
         ++position;
     }
 
@@ -279,7 +278,7 @@ void BattleInstance::Update(uint32_t dtMs)
     // 기존 이동 로직은 200ms마다 speed만큼 이동했다.
     constexpr double oldUpdateSeconds = 0.2;
 
-    for (BattleUnit& entry : units) 
+    for (BattleUnit& entry : units)
     {
         Unit& unit = entry.unit;
 
@@ -327,7 +326,7 @@ void BattleInstance::Update(uint32_t dtMs)
             };
 
         // 방어타워 후보
-        for (size_t i = 0; i < towers_.size(); ++i) 
+        for (size_t i = 0; i < towers_.size(); ++i)
         {
             const Tower& tower = towers_[i];
 
@@ -337,12 +336,12 @@ void BattleInstance::Update(uint32_t dtMs)
         }
 
         // 마을회관 후보
-        if (!townHall_.destroyed && townHall_.hp > 0) 
+        if (!townHall_.destroyed && townHall_.hp > 0)
         {
             considerTarget(townHall_.pos, -1);
         }
 
-        if (!foundTarget) 
+        if (!foundTarget)
         {
             unit.hasTarget = FALSE;
             continue;
@@ -481,13 +480,13 @@ BattleProgress BattleInstance::BuildBattleProgress() const
     progress.partyId = partyId_;
 
     progress.remainingSeconds = static_cast<uint16_t>((remainingMs_ + 999u) / 1000u);
-    
+
     const size_t totalTowers = towers_.size();
     size_t destroyedTowers = 0;
 
-    for (const Tower& tower : towers_) 
+    for (const Tower& tower : towers_)
     {
-        if (tower.destroyed) 
+        if (tower.destroyed)
         {
             ++destroyedTowers;
         }
@@ -497,7 +496,7 @@ BattleProgress BattleInstance::BuildBattleProgress() const
     const size_t totalBuildings = totalTowers + 1;
     size_t destroyedBuildings = destroyedTowers;
 
-    if (townHall_.destroyed) 
+    if (townHall_.destroyed)
     {
         ++destroyedBuildings;
     }
@@ -517,7 +516,7 @@ BattleProgress BattleInstance::BuildBattleProgress() const
     return progress;
 }
 
-void BattleInstance::CheckResult() 
+void BattleInstance::CheckResult()
 {
     if (result_.finished) {
         return;
@@ -547,5 +546,52 @@ BattleResult BattleInstance::BuildBattleResult() const
     message.reason = result_.reason;
     message.stars = result_.stars;
     message.destructionPercent = result_.destructionPct;
+    return message;
+}
+
+// 중단 투표 ==============================================================================
+
+namespace {
+    constexpr uint32_t kAbortVoteMs = 20000;   // 투표 제한 시간 20초
+}
+
+bool BattleInstance::StartAbortVote(PlayerId leaverId, const std::vector<PlayerId>& voters)
+{
+    // 투표할 사람이 없거나 이미 끝난 전투면 시작하지 않음.
+    if (voters.empty() || result_.finished) return false;
+
+    // 이미 진행 중이던 투표가 있으면 새 명단과 새 20초로 다시 시작
+    vote_ = AbortVote{};
+    vote_.active = true;
+    vote_.leaverId = leaverId;
+    vote_.remainingMs = kAbortVoteMs;
+    vote_.voters = voters;
+    return true;
+}
+
+void BattleInstance::UpdateVote(uint32_t dtMs)
+{
+    if (!vote_.active) return;
+    vote_.remainingMs = dtMs >= vote_.remainingMs ? 0 : vote_.remainingMs - dtMs;
+}
+
+bool BattleInstance::IsVoteExpired() const
+{
+    return vote_.active && vote_.remainingMs == 0;
+}
+
+void BattleInstance::CancelVote()
+{
+    vote_ = AbortVote{};
+}
+
+AbortVoteStart BattleInstance::BuildAbortVoteStart() const
+{
+    AbortVoteStart message{};
+    message.partyId = partyId_;
+    message.leaverId = vote_.leaverId;
+    message.voteSeconds = static_cast<uint16_t>((vote_.remainingMs + 999) / 1000);
+    message.totalVoters = static_cast<uint8_t>(vote_.voters.size());
+    message.requestedVotes = static_cast<uint8_t>(vote_.voters.size() / 2 + 1);   // 과반
     return message;
 }

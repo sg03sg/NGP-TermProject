@@ -128,10 +128,15 @@ public:
     void Update(uint32_t dtMs);                                                    // 이동·공격·피해 계산
     void RemoveDeadEntities();                                                     // 순서를 지키며 제거
     void CheckResult();                                                            // 종료 조건 판정
-    void StartAbortVote(PlayerId leaverId);                                        // 20초 투표 시작
+    bool StartAbortVote(PlayerId leaverId, const std::vector<PlayerId>& voters);   // 20초 투표 시작 (voters: 남은 파티원)
+    void UpdateVote(uint32_t dtMs);                                                // 투표 남은 시간 감소
+    bool IsVoteActive() const { return vote_.active; }
+    bool IsVoteExpired() const;                                                    // 진행 중이고 시간이 다 됨
+    void CancelVote();                                                             // 투표 상태 초기화
+    AbortVoteStart BuildAbortVoteStart() const;                                    // ABORT_VOTE_START 내용
     void CastVote(PlayerId pid, bool stop);                                        // 한 표 기록
     VoteOutcome TallyVote();     // 과반 집계와 확정
-    BattleState BuildBattleState() const;      
+    BattleState BuildBattleState() const;
     BattleProgress BuildBattleProgress() const;
     bool IsFinished() const { return result_.finished; }
     BattleResult BuildBattleResult() const;

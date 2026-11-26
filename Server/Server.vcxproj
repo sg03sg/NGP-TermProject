@@ -84,6 +84,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BattleManager.cpp" />
     <ClCompile Include="Server_Main.cpp" />
     <ClCompile Include="GameServer.cpp" />
     <ClCompile Include="ClientSession.cpp" />
@@ -101,6 +102,7 @@
     <ClCompile Include="..\Unit.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BattleManager.h" />
     <ClInclude Include="GameServer.h" />
     <ClInclude Include="ClientSession.h" />
     <ClInclude Include="SessionManager.h" />

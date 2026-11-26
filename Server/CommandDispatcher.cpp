@@ -378,6 +378,55 @@ void CommandDispatcher::HandleSpawn(const Command& cmd) {
 }
 
 void CommandDispatcher::HandleAbortVoteCast(const Command& cmd) { LogReceived(cmd, "ABORT_VOTE_CAST"); }
+
+void CommandDispatcher::StartAbortVote(PartyId partyId, PlayerId leaverId)
+{
+    const Party* party = server_.GetPartyManager().GetParty(partyId);
+    BattleInstance* battle = server_.FindBattle(partyId);
+
+    // 마지막 사람이 나가 파티가 사라졌다면 투표할 사람이 없음. 남은 전투는 BattleManager가 정리
+    if (!party || party->IsEmpty() || !battle) return;
+
+    if (!battle->StartAbortVote(leaverId, party->Members())) return;
+
+    const AbortVoteStart message = battle->BuildAbortVoteStart();
+    const PacketCodec::Packet packet = PacketCodec::Encode(message, 0);   // 공통 이벤트이므로 requestId는 0
+    if (packet.empty()) {
+        std::cout << "[ABORT_VOTE_START] Encode failed\n";
+        battle->CancelVote();
+        return;
+    }
+
+    SendToPlayers(party->Members(), packet);
+
+    std::cout << "[ABORT_VOTE_START] partyId=" << partyId
+        << " leaverId=" << leaverId
+        << " voters=" << static_cast<unsigned>(message.totalVoters)
+        << " requested=" << static_cast<unsigned>(message.requestedVotes)
+        << " seconds=" << message.voteSeconds << std::endl;
+}
+
+void CommandDispatcher::UpdateAbortVotes(uint32_t dtMs)
+{
+    for (auto& entry : server_.GetBattleManager().Battles()) {
+        BattleInstance& battle = *entry.second;
+        if (!battle.IsVoteActive()) continue;
+
+        // 전투가 이미 끝났다면
+        if (battle.IsFinished()) {
+            battle.CancelVote();
+            continue;
+        }
+
+        battle.UpdateVote(dtMs);
+        if (battle.IsVoteExpired()) {
+            // 여기서 TallyVote로 집계하고 ABORT_VOTE_RESULT를 보낸 뒤, 가결이면 전투를 정리하고 대기창으로 복귀
+            std::cout << "[ABORT_VOTE] partyId=" << entry.first << " 제한 시간 만료 (집계와 결과 전송은 아직 미구현)" << std::endl;
+            battle.CancelVote();
+        }
+    }
+}
+
 void CommandDispatcher::HandleMarkerRequest(const Command& cmd)
 {
     MarkerRequest req;
@@ -504,9 +553,15 @@ void CommandDispatcher::HandleDisconnected(int sessionId)
     if (it == sessionToPlayer_.end()) return;   // HELLO 전에 끊김
     const PlayerId pid = it->second;
 
+    // 전투 중(Running)에 끊긴 것인지 제거하기 전에 기록한다.
+    const PartyId partyId = server_.GetPartyManager().PartyOf(pid);
+    const Party* partyBefore = server_.GetPartyManager().GetParty(partyId);
+    const bool wasRunning = partyBefore && partyBefore->Status() == PartyStatus::Running;
+
     partyHandler_.HandlePlayerLeft(pid);        // 파티에서 제거, 남은 파티원에게 PARTY_STATE
+    if (wasRunning) StartAbortVote(partyId, pid);   // 이탈자의 유닛은 맵에 남고, 남은 파티원이 중단 여부를 투표
     sessionToPlayer_.erase(it);
     playerToSession_.erase(pid);
     players_.erase(pid);
     server_.GetLobbyBroadcaster().Invalidate();
-}
+}   

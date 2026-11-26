@@ -174,6 +174,9 @@ void GameServer::WorkerLoop()
         battleManager_.RemoveBattlesWithoutParty(
             [this](PartyId id) { return partyManager_.GetParty(id) != nullptr; });
 
+        // 중단 투표 남은 시간 갱신
+        dispatcher_.UpdateAbortVotes(dtMs);
+
         // 5. 끊긴 세션 정리
         session_manager_.ReapClosed();
 
