@@ -50,6 +50,8 @@ struct PlayerState {            // 개인 마나 등 상태
 struct BattleUnit {
     PlayerId ownerId;
     Unit unit;
+    double preciseX = static_cast<double>(unit.x);
+    double preciseY = static_cast<double>(unit.y);
 };
 
 struct Tower {                  // towers_ : 적 방어타워 사본
@@ -78,13 +80,7 @@ struct AbortVote {              // vote_ : 중단 투표 진행 상태
     std::vector<PlayerId> continueVotes;
 };
 
-//struct BattleResult {           // result_ : 파괴율과 별 개수
-//    bool    finished = false;
-//    uint8_t reason = 0;         // 0:진행중 1:전부 파괴 2:시간 종료 3:중단
-//    uint8_t destructionPct = 0;
-//    uint8_t stars = 0;
-//};
-struct BattleOutcome {
+struct BattleResultState {
     bool finished = false;
     uint8_t reason = 0;
     uint8_t destructionPct = 0;
@@ -108,6 +104,15 @@ struct MapData {
     Structure          townHall;
 };
 
+struct BattleArrow {
+    double x;
+    double y;
+    double targetX;
+    double targetY;
+    int targetIndex;     
+    uint32_t damage;
+};
+
 
 class BattleInstance {
 private:
@@ -121,8 +126,8 @@ private:
     AbortVote                vote_;             // 중단 투표 진행 상태
     uint32_t                 tick_ = 0;         // 경과 틱 수
     uint32_t                 remainingMs_ = 0;  // 남은 제한 시간
-    //BattleResult             result_;           // 파괴율과 별 개수
-    BattleOutcome result_;
+    BattleResultState result_;
+    std::vector<BattleArrow> arrows_;
 
 public:
     explicit BattleInstance(PartyId partyId);
@@ -135,10 +140,11 @@ public:
     void CheckResult();                                                            // 종료 조건 판정
     void StartAbortVote(PlayerId leaverId);                                        // 20초 투표 시작
     void CastVote(PlayerId pid, bool stop);                                        // 한 표 기록
-    VoteOutcome TallyVote();                                                       // 과반 집계와 확정
-    Snapshot BuildBattleState() const;                                             // 병력·구조물 상태 복사
-    Snapshot BuildBattleProgress() const;                                          // 남은 시간·파괴율·별
-    Unit* SpawnUnit(uint32_t ownerId, UnitType type,int x, int y, const UnitStats& stats);
+    VoteOutcome TallyVote();     // 과반 집계와 확정
+    BattleState BuildBattleState() const;      
+    BattleProgress BuildBattleProgress() const;
+    bool IsFinished() const { return result_.finished; }
+    BattleResult BuildBattleResult() const;
     Unit* FindUnit(int id);
     int CountUnits(UnitType type) const;
     void ClearUnits();
@@ -147,4 +153,6 @@ public:
     const std::vector<BattleUnit>& GetUnits() const;
     BattleInit BuildBattleInit() const;
     const PlayerState* FindPlayer(PlayerId pid) const;
+    void UpdateArrows(double dtSeconds);
+    void DamageStructure(int targetIndex, uint32_t damage);
 };

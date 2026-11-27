@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <map>
 #include <string>
 #include <vector>
@@ -8,50 +8,56 @@
 
 class GameServer;
 
-// ¿äÃ» Å¥¿¡¼­ ²¨³½ ¿äÃ»À» messageTypeº° Ã³¸® ÇÔ¼ö·Î ºĞ¹è
-// ¿öÄ¿ ½º·¹µå¿¡¼­¸¸ È£Ãâ
+// ìš”ì²­ íì—ì„œ êº¼ë‚¸ ìš”ì²­ì„ messageTypeë³„ ì²˜ë¦¬ í•¨ìˆ˜ë¡œ ë¶„ë°°
+// ì›Œì»¤ ìŠ¤ë ˆë“œì—ì„œë§Œ í˜¸ì¶œ
 class CommandDispatcher {
 private:
     GameServer& server_;
 
-    // Á¢¼Ó »óÅÂ: sessionId <-> playerId. ¿öÄ¿ ½º·¹µå¸¸ Á¢±ÙÇÏ¹Ç·Î ¶ôÀÌ ¾ø´Ù.
+    // ì ‘ì† ìƒíƒœ: sessionId <-> playerId. ì›Œì»¤ ìŠ¤ë ˆë“œë§Œ ì ‘ê·¼í•˜ë¯€ë¡œ ë½ì´ ì—†ë‹¤.
     std::map<int, PlayerId>         sessionToPlayer_;
     std::map<PlayerId, int>         playerToSession_;
-    std::map<PlayerId, std::string> players_;   // playerId -> ´Ğ³×ÀÓ
+    std::map<PlayerId, std::string> players_;   // playerId -> ë‹‰ë„¤ì„
     PlayerId                        nextPlayerId_ = 1;
 
-    PartyCommandHandler             partyHandler_;   // ÀåÇö¿ì: ·Îºñ¡¤ÆÄÆ¼
+    PartyCommandHandler             partyHandler_;   // ì¥í˜„ìš°: ë¡œë¹„Â·íŒŒí‹°
 
-    // Àü¼Û º¸Á¶ (ÀÎÄÚµù ½ÇÆĞ·Î ºó ÆĞÅ¶ÀÌ¸é º¸³»Áö ¾Ê´Â´Ù)
+    // ì „ì†¡ ë³´ì¡° (ì¸ì½”ë”© ì‹¤íŒ¨ë¡œ ë¹ˆ íŒ¨í‚·ì´ë©´ ë³´ë‚´ì§€ ì•ŠëŠ”ë‹¤)
     void SendToSession(int sessionId, const PacketCodec::Packet& packet);
     void SendToSessions(const std::vector<int>& sessionIds, const PacketCodec::Packet& packet);
     void SendToPlayer(PlayerId pid, const PacketCodec::Packet& packet);
     void SendToPlayers(const std::vector<PlayerId>& pids, const PacketCodec::Packet& packet);
-    PlayerId PlayerOf(int sessionId) const;   // HELLO ÀüÀÌ¸é kInvalidPlayerId
+    PlayerId PlayerOf(int sessionId) const;   // HELLO ì „ì´ë©´ kInvalidPlayerId
 
     void DispatchPacket(const Command& cmd);
 
-    // Á¢¼Ó
+    // ì ‘ì†
     void HandleHello(const Command& cmd);
     void HandleDisconnected(int sessionId);
 
-    // ·Îºñ¿Í ÆÄÆ¼
+    // ë¡œë¹„ì™€ íŒŒí‹°
     void HandleJoinMap(const Command& cmd);
     void HandleStartGame(const Command& cmd);
     void HandleLeaveParty(const Command& cmd);
 
-    // Ã¤ÆÃ
+    // ì±„íŒ…
     void HandleChatSend(const Command& cmd);
 
-    // ÀüÅõ
+    // ì „íˆ¬
     void HandleSpawn(const Command& cmd);
     void HandleAbortVoteCast(const Command& cmd);
 
-    // ÁÂÇ¥ Å×½ºÆ®
+    // ì¢Œí‘œ í…ŒìŠ¤íŠ¸
     void HandleMarkerRequest(const Command& cmd);
 
 public:
     explicit CommandDispatcher(GameServer& server);
 
     void Dispatch(const Command& cmd);
+
+    void SendBattleState(const BattleState& message);
+
+    void SendBattleProgress(const BattleProgress& message);
+
+    void SendBattleResult(const BattleResult& message);
 };

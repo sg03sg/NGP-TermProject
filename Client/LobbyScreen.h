@@ -23,6 +23,7 @@ public:
     void Paint(HWND hWnd, HDC hdc);                       // 현재 화면을 백버퍼에 그려 hdc로 복사
     void PaintOverlay(HDC hdc);                           // 기존 게임 화면 위에 파티 대기창과 안내 문구만 얹어 그림
     bool IsPartyVisible() const;                          // 파티 대기창이 떠 있는지
+    void OnBattleResult() { state_.EnterResult(); }       // GameWindow 멤버를 
 
     bool IsActive() const;                                // 로비·파티 대기창을 보여줄 단계인지
     const ClientState& State() const { return state_; }

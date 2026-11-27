@@ -11,7 +11,7 @@ BOOL isLoading = TRUE;
 BOOL showGrid = FALSE;
 BOOL showrange = FALSE;
 BOOL showblock = FALSE;
-BOOL gameend = FALSE;
+BOOL gameEnd = FALSE;
 BOOL victory = FALSE;
 int loadingProgress = 0;
 

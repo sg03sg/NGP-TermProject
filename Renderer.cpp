@@ -351,6 +351,13 @@ static void DrawShopScreen(HDC mDC) {
 
 }
 
+static int battleStars = -1;
+
+void Renderer_SetBattleStars(int stars)
+{
+    battleStars = stars;
+}
+
 static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
     if (hStageMap[stageIdx]) {
         HDC memDC = CreateCompatibleDC(mDC);
@@ -363,16 +370,8 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
         const Unit& u = entry.unit;
         if (u.GetType() != UnitType::Barbarian) continue;
         int x = u.x, y = u.y, frame = u.frameIndex;
-        int tidx = u.targetIndex;
-        HBITMAP bmpToUse = hWalkBmp[frame];
-        BITMAP* bmpInfo = &bmpWalk[frame];
-        if (u.hasTarget && tidx >= 0 && tidx < cannonCount[stageIdx]) {
-            int cannonX = cannons[stageIdx][tidx].x;
-            if (x < cannonX) {
-                bmpToUse = hRightWalkBmp[frame];
-                bmpInfo = &bmpRightWalk[frame];
-            }
-        }
+        HBITMAP bmpToUse = u.facingRight ? hRightWalkBmp[frame] : hWalkBmp[frame];
+        BITMAP* bmpInfo = u.facingRight ? &bmpRightWalk[frame] : &bmpWalk[frame];
         SelectObject(paintDC, bmpToUse);
         COLORREF baba_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, x, y, tileHeight, tileHeight, paintDC, 0, 0,
@@ -385,16 +384,8 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
         const Unit& u = entry.unit;
         if (u.GetType() != UnitType::Archer) continue;
         int x = u.x, y = u.y, frame = u.frameIndex;
-        int tidx = u.targetIndex;
-        HBITMAP bmpToUse = hArcherBmp[frame];
-        BITMAP* bmpInfo = &aWalk[frame];
-        if (u.hasTarget && tidx >= 0 && tidx < cannonCount[stageIdx]) {
-            int cannonX = cannons[stageIdx][tidx].x;
-            if (x < cannonX) {
-                bmpToUse = hrightarcherbmp[frame];
-                bmpInfo = &bmprightarcher[frame];
-            }
-        }
+        HBITMAP bmpToUse = u.facingRight ? hrightarcherbmp[frame] : hArcherBmp[frame];
+        BITMAP* bmpInfo = u.facingRight ? &bmprightarcher[frame] : &aWalk[frame];
         SelectObject(paintDC, bmpToUse);
         COLORREF archer_back_color = GetPixel(paintDC, 0, 1);
         TransparentBlt(mDC, x, y, tileHeight, tileHeight, paintDC, 0, 0,
@@ -545,7 +536,11 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
     DeleteObject(blue_mana);
 
     //별
-    if (towercount[stageIdx] >= naturaltowercount[stageIdx] * 0.7f) {
+
+    const int totalTowers = naturaltowercount[stageIdx];
+    const int destroyedTowers = totalTowers - towercount[stageIdx];
+
+    if (totalTowers == 0 || destroyedTowers * 100 < totalTowers * 30) {
         // 첫 번째 별: 70% 이상일 때
         SelectObject(paintDC, hui5bmp);
         COLORREF ui5_back_color = GetPixel(paintDC, 0, 1);
@@ -558,7 +553,7 @@ static void DrawStageScreen(HDC mDC, HDC paintDC, int stageIdx, HWND hWnd) {
         TransparentBlt(mDC, uis[3].x, uis[3].y, uis[3].length, uis[3].height, paintDC, 0, 0, bmpui6.bmWidth, bmpui6.bmHeight, ui6_back_color);
     }
 
-    if (towercount[stageIdx] >= naturaltowercount[stageIdx] * 0.4f) {
+    if (totalTowers == 0 || destroyedTowers * 100 < totalTowers * 60) {
         // 두 번째 별: 40% 이상일 때
         SelectObject(paintDC, hui5bmp);
         COLORREF ui5_back_color = GetPixel(paintDC, 0, 1);
@@ -638,7 +633,7 @@ static void DRAWENDScreen(HWND hWnd, HDC mDC, HDC paintDC)
         DeleteObject(hFont);
     }
 
-    else if (!victory && gameend)
+    else if (!victory && gameEnd)
     {
         SelectObject(paintDC, enddbmp);
         StretchBlt(mDC, 0, 0, bkrect.right, bkrect.bottom, paintDC, 0, 0, bmpendd.bmWidth, bmpendd.bmHeight, SRCCOPY);

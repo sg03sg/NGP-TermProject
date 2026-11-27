@@ -97,6 +97,60 @@ void CommandDispatcher::SendToPlayers(const std::vector<PlayerId>& pids, const P
     SendToSessions(ids, packet);
 }
 
+void CommandDispatcher::SendBattleState(const BattleState& message)
+{
+    const Party* party = server_.GetPartyManager().GetParty(message.partyId);
+
+    if (!party || party->Status() != PartyStatus::Running)
+    {
+        return;
+    }
+
+    const PacketCodec::Packet packet = PacketCodec::Encode(message, 0);
+
+    if (packet.empty())
+    {
+        std::cout << "[BATTLE_STATE] Encode failed\n";
+        return;
+    }
+
+    // 전체 접속자가 아니라 해당 파티원에게만 전송
+    SendToPlayers(party->Members(), packet);
+}
+
+void CommandDispatcher::SendBattleProgress(const BattleProgress& message)
+{
+    const Party* party = server_.GetPartyManager().GetParty(message.partyId);
+    if (!party || party->Status() != PartyStatus::Running) {
+        return;
+    }
+
+    const PacketCodec::Packet packet = PacketCodec::Encode(message, 0);
+    if (packet.empty()) {
+        std::cout << "[BATTLE_PROGRESS] Encode failed\n";
+        return;
+    }
+
+    SendToPlayers(party->Members(), packet);
+}
+
+void CommandDispatcher::SendBattleResult(const BattleResult& message)
+{
+    Party* party = server_.GetPartyManager().GetParty(message.partyId);
+    if (!party || party->Status() != PartyStatus::Running) {
+        return;
+    }
+
+    const PacketCodec::Packet packet = PacketCodec::Encode(message, 0);
+    if (packet.empty()) {
+        std::cout << "[BATTLE_RESULT] Encode failed\n";
+        return;
+    }
+
+    SendToPlayers(party->Members(), packet);
+    party->SetStatus(PartyStatus::Finished);
+}
+
 PlayerId CommandDispatcher::PlayerOf(int sessionId) const
 {
     auto it = sessionToPlayer_.find(sessionId);
@@ -243,7 +297,7 @@ void CommandDispatcher::HandleSpawn(const Command& cmd) {
     SpawnRequest request;
     PacketHeader header;
 
-    if (!PacketCodec::Decode(cmd.packet, request, &header)) 
+    if (!PacketCodec::Decode(cmd.packet, request, &header))
     {
         std::cout << "[SPAWN_REQUEST] Decode failed\n";
         return;
@@ -263,7 +317,7 @@ void CommandDispatcher::HandleSpawn(const Command& cmd) {
     const PlayerId pid = PlayerOf(cmd.sessionId);
     PartyManager& parties = server_.GetPartyManager();
 
-    if (pid == kInvalidPlayerId || !parties.IsInParty(pid)) 
+    if (pid == kInvalidPlayerId || !parties.IsInParty(pid))
     {
         reject(ErrorCode::NotInBattle);
         return;
@@ -304,7 +358,7 @@ void CommandDispatcher::HandleSpawn(const Command& cmd) {
     // 병종별 정렬 삽입이므로 반환된 ID로 조회한다.
     Unit* unit = battle->FindUnit(static_cast<int>(result.unitId));
 
-    if (!unit) 
+    if (!unit)
     {
         std::cout << "[SPAWN_REQUEST] Created unit not found\n";
         return;
@@ -423,9 +477,16 @@ void CommandDispatcher::HandleStartGame(const Command& cmd)
         return;
     }
 
-    auto battle = std::make_unique<BattleInstance>(party->Id());
+    // 전투 생성과 보관은 BattleManager가 한다.
+    BattleInstance* battle = nullptr;
+    const BattleCreateResult created = server_.GetBattleManager().CreateBattle(party->Id(), map, party->Members(), battle);
 
-    if (!battle->Initialize(map, party->Members())) {
+    if (created == BattleCreateResult::AlreadyExists) {
+        reject(PartyError::StageLocked);
+        return;
+    }
+
+    if (created != BattleCreateResult::Created) {
         std::cout << "[START_GAME] Battle initialization failed\n";
         reject(PartyError::InvalidStage);
         return;
@@ -437,11 +498,7 @@ void CommandDispatcher::HandleStartGame(const Command& cmd)
 
     if (packet.empty()) {
         std::cout << "[START_GAME] BATTLE_INIT encoding failed\n";
-        return;
-    }
-
-    if (!server_.AddBattle(party->Id(), std::move(battle))) {
-        reject(PartyError::StageLocked);
+        server_.GetBattleManager().RemoveBattle(party->Id());   // 시작하지 못했으니 보관하지 않는다.
         return;
     }
 

@@ -9,6 +9,9 @@
 #include <imm.h>
 
 #pragma comment(lib, "imm32.lib")
+#include <climits>
+#include <cstdio>
+#include <vector>
 
 namespace {
 	const TCHAR* WINDOW_CLASS = TEXT("ClientGameWindow");
@@ -128,6 +131,27 @@ namespace {
 		}
 		return 0;
 	}
+
+	std::vector<ArrowEffect> networkArrowEffects;
+
+	void ApplyArrowPositions(const std::vector<ArrowStateInfo>& arrows)
+	{
+		networkArrowEffects.clear();
+
+		for (const ArrowStateInfo& state : arrows) {
+			ArrowEffect effect{};
+
+			// 서버 좌표는 중심, TransparentBlt가 받는 좌표는 그림의 왼쪽 위다.
+			effect.x = static_cast<float>(state.x) - tileHeight / 2.0f;
+			effect.y = static_cast<float>(state.y) - tileHeight / 2.0f;
+			effect.active = TRUE;
+
+			networkArrowEffects.push_back(effect);
+		}
+
+		arrowEffects = networkArrowEffects.data();
+		arrowEffectCount = static_cast<int>(networkArrowEffects.size());
+	}
 }
 
 HWND GameWindow_Create(HINSTANCE hInst)
@@ -202,6 +226,7 @@ void GameWindow_EnterBattle(const BattleInit& message, uint32_t myPlayerId)
 {
 	const int stageIdx = static_cast<int>(message.mapId) - 1;
 	if (stageIdx < 0 || stageIdx >= 3) return;
+	Renderer_SetBattleStars(0);
 
 	// 이전 전투의 구조물, 병력, 효과 비우기
 	gameBattle.ClearUnits();
@@ -216,6 +241,7 @@ void GameWindow_EnterBattle(const BattleInit& message, uint32_t myPlayerId)
 	// 서버가 보낸 구조물을 종류별 배열에 채움. 종류 번호는 서버의 StructureKind와 같음
 	for (const StructureInitInfo& structure : message.structures) {
 		tower info = {};
+		info.structureId = structure.structureId;
 		info.x = static_cast<int>(structure.x);
 		info.y = static_cast<int>(structure.y);
 		info.active = TRUE;
@@ -235,6 +261,7 @@ void GameWindow_EnterBattle(const BattleInit& message, uint32_t myPlayerId)
 		case 3:
 			if (infernoCount[stageIdx] < MAX_TOWER) {
 				InfernoTower inferno = {};
+				inferno.structureId = structure.structureId;
 				inferno.x = info.x;
 				inferno.y = info.y;
 				inferno.active = TRUE;
@@ -268,11 +295,150 @@ void GameWindow_Invalidate()
 
 void GameWindow_ApplyUnitCreated(const UnitCreated& message)
 {
-	if (message.unitType > static_cast<uint8_t>(UnitType::Giant)) return;
-	const UnitType type = static_cast<UnitType>(message.unitType);
+	// 패킷의 ID, 좌표, HP는 uint32_t이고 Unit은 int로 저장한다.
+	if (message.unitId == 0 || message.unitId > INT_MAX ||
+		message.ownerId == 0 ||
+		message.unitType > static_cast<uint8_t>(UnitType::Giant) ||
+		message.x > INT_MAX || message.y > INT_MAX ||
+		message.maxHp == 0 || message.maxHp > INT_MAX ||
+		message.hp > message.maxHp) {
+		return;
+	}
 
-	// 서버가 확정한 병종과 좌표로 화면에 그릴 병력을 만든다. 능력치는 병종별 기본값 사용
-	gameBattle.SpawnUnit(message.ownerId, type, static_cast<int>(message.x), static_cast<int>(message.y), GetUnitStats(type));
+	const int unitId = static_cast<int>(message.unitId);
+	if (gameBattle.FindUnit(unitId) != nullptr) {
+		return;
+	}
+
+	const UnitType type = static_cast<UnitType>(message.unitType);
+	UnitStats stats = GetUnitStats(type);
+	stats.maxHp = static_cast<int>(message.maxHp);
+
+	BattleUnit entry{
+		message.ownerId,
+		Unit(unitId, type,
+			 static_cast<int>(message.x),
+			 static_cast<int>(message.y),
+			 stats)
+	};
+
+	// Unit 생성자는 현재 HP를 최대 HP로 초기화한다.
+	entry.unit.TakeDamage(static_cast<int>(message.maxHp - message.hp));
+
+	// 기존 화면 목록의 병종별 순서와 같은 병종 내 소환 순서를 유지한다.
+	auto& units = gameBattle.GetUnits();
+	auto position = units.begin();
+	while (position != units.end() && position->unit.GetType() <= type) 
+	{
+		++position;
+	}
+
+	const auto inserted = units.insert(position, entry);
+	std::printf("[화면 병력 등록] 서버 ID=%u 저장 ID=%d 좌표=(%d, %d)\n", message.unitId, inserted->unit.GetId(), inserted->unit.x, inserted->unit.y);
+	GameWindow_Invalidate();
+}
+
+void GameWindow_ApplyBattleState(const BattleState& message)
+{
+	for (const UnitStateInfo& state : message.units) {
+		if (state.unitId == 0 || state.unitId > INT_MAX ||
+			state.x > INT_MAX || state.y > INT_MAX) {
+			continue;
+		}
+
+		Unit* unit = gameBattle.FindUnit(static_cast<int>(state.unitId));
+		if (unit == nullptr) {
+			continue;
+		}
+
+		const int newX = static_cast<int>(state.x);
+		const int newY = static_cast<int>(state.y);
+		const bool moved = (unit->x != newX || unit->y != newY);
+
+		if (newX != unit->x) {
+			unit->facingRight = (newX > unit->x);
+		}
+
+		if (moved) {
+			// 바바리안·아처는 20틱, 자이언트는 40틱마다 다음 걷기 그림을 표시한다.
+			const uint32_t ticksPerFrame =
+				(unit->GetType() == UnitType::Giant) ? 40u : 20u;
+
+			unit->frameIndex = static_cast<int>((message.serverTick / ticksPerFrame) % 3u);
+		}
+		else {
+			unit->frameIndex = 0;
+		}
+
+		unit->x = newX;
+		unit->y = newY;
+	}
+
+	const int stageIdx = static_cast<int>(gameState) - static_cast<int>(STATE_STAGE1);
+	if (stageIdx >= 0 && stageIdx < 3) {
+		// 1. 서버가 보낸 모든 건물의 HP와 active를 먼저 갱신한다.
+		for (const StructureStateInfo& state : message.structures) {
+			if (state.structureId == 0 || state.maxHp == 0 ||
+				state.maxHp > INT_MAX || state.hp > state.maxHp) {
+				continue;
+			}
+
+			auto applyHp = [&](auto& building) {
+				if (building.structureId != state.structureId) return;
+
+				building.hp = static_cast<int>(state.hp);
+				building.maxHp = static_cast<int>(state.maxHp);
+				building.active = (state.hp > 0);
+				};
+
+			applyHp(villageking);
+
+			for (int i = 0; i < cannonCount[stageIdx]; ++i)
+				applyHp(cannons[stageIdx][i]);
+
+			for (int i = 0; i < mortarCount[stageIdx]; ++i)
+				applyHp(mortars[stageIdx][i]);
+
+			for (int i = 0; i < infernoCount[stageIdx]; ++i)
+				applyHp(infernos[stageIdx][i]);
+		}
+
+		int remainingTowers = 0;
+
+		for (int i = 0; i < cannonCount[stageIdx]; ++i) {
+			if (cannons[stageIdx][i].active) ++remainingTowers;
+		}
+
+		for (int i = 0; i < mortarCount[stageIdx]; ++i) {
+			if (mortars[stageIdx][i].active) ++remainingTowers;
+		}
+
+		for (int i = 0; i < infernoCount[stageIdx]; ++i) {
+			if (infernos[stageIdx][i].active) ++remainingTowers;
+		}
+
+		towercount[stageIdx] = remainingTowers;
+	}
+
+	ApplyArrowPositions(message.arrows);
+	GameWindow_Invalidate();
+}
+
+void GameWindow_ApplyBattleProgress(const BattleProgress& progress)
+{
+	const int seconds = progress.remainingSeconds;
+	wsprintf(timeStr, TEXT("%02d:%02d"), seconds / 60, seconds % 60);
+
+	Renderer_SetBattleStars(progress.stars);
+	GameWindow_Invalidate();
+}
+
+void GameWindow_ApplyBattleResult(const BattleResult& result)
+{
+	victory = (result.reason == 1); // reason == 1 -> 별 3개 달성, reason == 2 -> 시간 만료 
+	gameEnd = TRUE;
+	gameState = STATE_END;
+
 	GameWindow_Invalidate();
 }
 

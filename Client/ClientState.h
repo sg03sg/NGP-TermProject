@@ -51,6 +51,7 @@ public:
     void ApplyLobbyState(const std::vector<LobbyMapInfo>& maps);  // 로비 현황 교체
     void ApplyBattleInit(const BattleInit& message);
     void AppendChat(const ChatEntry& entry);                      // 채팅 한 줄 추가, 넘치면 오래된 것부터 삭제
+    void EnterResult() { screen_ = ScreenState::Result; }
     const BattleInit& Battle() const { return battle_; }
     const std::vector<ChatEntry>& ChatLog() const { return chatLog_; }
     void Clear();                                                 // 로비 복귀 시 초기화
