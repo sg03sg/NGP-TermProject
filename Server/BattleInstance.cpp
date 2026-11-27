@@ -126,7 +126,8 @@ Result BattleInstance::TrySpawnUnit(
     // 기존 병종별 정렬과 같은 병종 내 소환 순서를 유지한다.
     auto position = units.begin();
 
-    while (position != units.end() && position->unit.GetType() <= t) {
+    while (position != units.end() &&
+        position->unit.GetType() <= t) {
         ++position;
     }
 
@@ -593,5 +594,45 @@ AbortVoteStart BattleInstance::BuildAbortVoteStart() const
     message.voteSeconds = static_cast<uint16_t>((vote_.remainingMs + 999) / 1000);
     message.totalVoters = static_cast<uint8_t>(vote_.voters.size());
     message.requestedVotes = static_cast<uint8_t>(vote_.voters.size() / 2 + 1);   // 과반
+    return message;
+}
+
+bool BattleInstance::CastVote(PlayerId pid, bool stop)
+{
+    if (!vote_.active) return false;
+
+    // 투표 대상은 투표 시작 시점의 남은 파티원
+    if (std::find(vote_.voters.begin(), vote_.voters.end(), pid) == vote_.voters.end()) return false;
+
+    // 한 사람이 한 번만 투표할 수 있고, 먼저 낸 표를 유지
+    if (std::find(vote_.stopVotes.begin(), vote_.stopVotes.end(), pid) != vote_.stopVotes.end()) return false;
+    if (std::find(vote_.continueVotes.begin(), vote_.continueVotes.end(), pid) != vote_.continueVotes.end()) return false;
+
+    (stop ? vote_.stopVotes : vote_.continueVotes).push_back(pid);
+    return true;
+}
+
+VoteOutcome BattleInstance::TallyVote() const
+{
+    if (!vote_.active) return VoteOutcome::Pending;
+
+    const size_t voterCount = vote_.voters.size();
+    const size_t responded = vote_.stopVotes.size() + vote_.continueVotes.size();
+
+    // 전원이 응답했거나 제한 시간이 지났을 때만 확정
+    if (responded < voterCount && vote_.remainingMs > 0) return VoteOutcome::Pending;
+
+    // 과반 중단에 찬성하면 중단, 아니면 재개. 응답하지 않은 사람은 재개로 본다. 남은 사람이 한 명이면 그 한 명의 선택대로
+    const size_t required = voterCount / 2 + 1;
+    return vote_.stopVotes.size() >= required ? VoteOutcome::Abort : VoteOutcome::Continue;
+}
+
+AbortVoteResult BattleInstance::BuildAbortVoteResult(VoteOutcome outcome) const
+{
+    AbortVoteResult message{};
+    message.partyId = partyId_;
+    message.aborted = outcome == VoteOutcome::Abort ? 1 : 0;
+    message.stopVotes = static_cast<uint8_t>(vote_.stopVotes.size());
+    message.totalVoters = static_cast<uint8_t>(vote_.voters.size());
     return message;
 }

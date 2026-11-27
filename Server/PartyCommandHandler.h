@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <functional>
 #include <string>
@@ -12,22 +12,22 @@ public:
     using Packet = PacketCodec::Packet;
 
     struct Context {
-        PartyManager& parties;                                                          // GameServer°¡ °¡Áø PartyManager
-        std::function<void(PlayerId, const Packet&)>                  sendToPlayer;     // ÇÑ ¸í¿¡°Ô Àü¼Û
-        std::function<void(const std::vector<PlayerId>&, const Packet&)> sendToPlayers; // ¿©·¯ ¸í¿¡°Ô Àü¼Û
-        std::function<std::string(PlayerId)>                          nameOf;           // ´Ğ³×ÀÓ Á¶È¸ (players_)
-        std::function<void()>                                         onLobbyChanged;   // ·Îºñ ÇöÈ²ÀÌ ¹Ù²ñ
+        PartyManager& parties;                                                          // GameServerê°€ ê°€ì§„ PartyManager
+        std::function<void(PlayerId, const Packet&)>                  sendToPlayer;     // í•œ ëª…ì—ê²Œ ì „ì†¡
+        std::function<void(const std::vector<PlayerId>&, const Packet&)> sendToPlayers; // ì—¬ëŸ¬ ëª…ì—ê²Œ ì „ì†¡
+        std::function<std::string(PlayerId)>                          nameOf;           // ë‹‰ë„¤ì„ ì¡°íšŒ (players_)
+        std::function<void()>                                         onLobbyChanged;   // ë¡œë¹„ í˜„í™©ì´ ë°”ë€œ
     };
 
     explicit PartyCommandHandler(Context ctx);
 
-    void HandleJoinMap(const Command& cmd, PlayerId pid);      // ¸Ê Âü°¡¿Í ÆÄÆ¼ »ı¼º
-    void HandleLeaveParty(const Command& cmd, PlayerId pid);   // ÅğÀå ½ÂÀÎ, ¹æÀå ÀÌÀü, ºó ÆÄÆ¼ »èÁ¦
-    void HandlePlayerLeft(PlayerId pid);                       // ¿¬°áÀÌ ²÷±ä ÇÃ·¹ÀÌ¾î¸¦ ÆÄÆ¼¿¡¼­ Á¦°Å
+    void HandleJoinMap(const Command& cmd, PlayerId pid);      // ë§µ ì°¸ê°€ì™€ íŒŒí‹° ìƒì„±
+    void HandleLeaveParty(const Command& cmd, PlayerId pid);   // í‡´ì¥ ìŠ¹ì¸, ë°©ì¥ ì´ì „, ë¹ˆ íŒŒí‹° ì‚­ì œ
+    void HandlePlayerLeft(PlayerId pid);                       // ì—°ê²°ì´ ëŠê¸´ í”Œë ˆì´ì–´ë¥¼ íŒŒí‹°ì—ì„œ ì œê±°
+    void BroadcastPartyState(PartyId partyId);                 // íŒŒí‹°ì› ì „ì›ì—ê²Œ PARTY_STATE (ì¤‘ë‹¨ íˆ¬í‘œ ê°€ê²° ë’¤ ëŒ€ê¸°ì‹¤ ë³µê·€ ë•Œë„ ì‚¬ìš©)
 
 private:
     void SendRejected(PlayerId pid, MessageType rejectedType, PartyError error, uint32_t requestId);
-    void BroadcastPartyState(PartyId partyId);                 // ÆÄÆ¼¿ø Àü¿ø¿¡°Ô PARTY_STATE
 
     Context ctx_;
 };

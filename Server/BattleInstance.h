@@ -134,8 +134,9 @@ public:
     bool IsVoteExpired() const;                                                    // 진행 중이고 시간이 다 됨
     void CancelVote();                                                             // 투표 상태 초기화
     AbortVoteStart BuildAbortVoteStart() const;                                    // ABORT_VOTE_START 내용
-    void CastVote(PlayerId pid, bool stop);                                        // 한 표 기록
-    VoteOutcome TallyVote();     // 과반 집계와 확정
+    bool CastVote(PlayerId pid, bool stop);                                        // 한 표 기록 (기록하면 true, 투표 대상이 아니거나 이미 투표했으면 false)
+    VoteOutcome TallyVote() const;                                                 // 전원 응답 또는 시간 만료 시 과반 집계, 그 전에는 Pending
+    AbortVoteResult BuildAbortVoteResult(VoteOutcome outcome) const;               // ABORT_VOTE_RESULT 내용
     BattleState BuildBattleState() const;
     BattleProgress BuildBattleProgress() const;
     bool IsFinished() const { return result_.finished; }

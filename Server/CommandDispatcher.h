@@ -47,6 +47,7 @@ private:
     void HandleSpawn(const Command& cmd);
     void HandleAbortVoteCast(const Command& cmd);
     void StartAbortVote(PartyId partyId, PlayerId leaverId);   // 남은 파티원에게 ABORT_VOTE_START 전송, 20초 타이머 시작
+    void ResolveAbortVote(PartyId partyId);                    // 집계가 확정되면 ABORT_VOTE_RESULT 전송, 가결이면 전투 정리와 대기실 복귀
 
     // 좌표 테스트
     void HandleMarkerRequest(const Command& cmd);

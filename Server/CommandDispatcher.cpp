@@ -377,7 +377,59 @@ void CommandDispatcher::HandleSpawn(const Command& cmd) {
         << '\n';
 }
 
-void CommandDispatcher::HandleAbortVoteCast(const Command& cmd) { LogReceived(cmd, "ABORT_VOTE_CAST"); }
+void CommandDispatcher::HandleAbortVoteCast(const Command& cmd)
+{
+    AbortVoteCast request;
+    PacketHeader header;
+
+    if (!PacketCodec::Decode(cmd.packet, request, &header)) {
+        std::cout << "[ABORT_VOTE_CAST] Decode failed\n";
+        return;
+    }
+
+    auto reject = [&](ErrorCode error) {
+        RequestRejected message;
+        message.rejectedType = static_cast<uint16_t>(MessageType::ABORT_VOTE_CAST);
+        message.errorCode = static_cast<uint16_t>(error);
+        SendToSession(cmd.sessionId, PacketCodec::Encode(message, header.requestId));
+        };
+
+    // 투표자는 요청 본문이 아니라 접속 세션과 서버의 파티 소속 기록으로 확인
+    const PlayerId pid = PlayerOf(cmd.sessionId);
+    PartyManager& parties = server_.GetPartyManager();
+
+    if (pid == kInvalidPlayerId || !parties.IsInParty(pid) || parties.PartyOf(pid) != request.partyId) {
+        reject(ErrorCode::NotInBattle);
+        return;
+    }
+
+    const PartyId partyId = request.partyId;
+    const Party* party = parties.GetParty(partyId);
+    BattleInstance* battle = server_.FindBattle(partyId);
+
+    if (!party || party->Status() != PartyStatus::Running || !battle) {
+        reject(ErrorCode::NotInBattle);
+        return;
+    }
+
+    // 제한 시간이 지났거나 이미 확정된 투표에 늦게 도착한 응답은 오류가 아니므로 무시
+    if (!battle->IsVoteActive()) {
+        std::cout << "[ABORT_VOTE_CAST] partyId=" << partyId << " playerId=" << pid
+            << " 진행 중인 투표가 없어 무시" << std::endl;
+        return;
+    }
+
+    if (!battle->CastVote(pid, request.stop != 0)) {
+        std::cout << "[ABORT_VOTE_CAST] partyId=" << partyId << " playerId=" << pid
+            << " 이미 투표했거나 투표 대상이 아니어서 무시" << std::endl;
+        return;
+    }
+
+    std::cout << "[ABORT_VOTE_CAST] partyId=" << partyId << " playerId=" << pid
+        << " 선택=" << (request.stop != 0 ? "중단" : "재개") << std::endl;
+
+    ResolveAbortVote(partyId);   // 마지막 응답이면 바로 확정
+}
 
 void CommandDispatcher::StartAbortVote(PartyId partyId, PlayerId leaverId)
 {
@@ -406,8 +458,48 @@ void CommandDispatcher::StartAbortVote(PartyId partyId, PlayerId leaverId)
         << " seconds=" << message.voteSeconds << std::endl;
 }
 
+void CommandDispatcher::ResolveAbortVote(PartyId partyId)
+{
+    BattleInstance* battle = server_.FindBattle(partyId);
+    if (!battle || !battle->IsVoteActive()) return;
+
+    const VoteOutcome outcome = battle->TallyVote();
+    if (outcome == VoteOutcome::Pending) return;   // 아직 응답을 기다리는 중
+
+    // 투표 상태를 지우기 전에 결과 내용을 만든다.
+    const AbortVoteResult result = battle->BuildAbortVoteResult(outcome);
+    battle->CancelVote();
+
+    Party* party = server_.GetPartyManager().GetParty(partyId);
+    if (party && !party->IsEmpty()) {
+        const PacketCodec::Packet packet = PacketCodec::Encode(result, 0);   // 공통 이벤트이므로 requestId는 0
+        if (packet.empty()) std::cout << "[ABORT_VOTE_RESULT] Encode failed\n";
+        else SendToPlayers(party->Members(), packet);
+    }
+
+    std::cout << "[ABORT_VOTE_RESULT] partyId=" << partyId
+        << " aborted=" << static_cast<unsigned>(result.aborted)
+        << " stopVotes=" << static_cast<unsigned>(result.stopVotes)
+        << " totalVoters=" << static_cast<unsigned>(result.totalVoters) << std::endl;
+
+    if (outcome != VoteOutcome::Abort) return;   // 부결이면 전투는 그대로 계속
+
+    // 가결: 전투를 정리하고 파티를 대기 상태로 되돌린다. 파티 명단은 그대로 유지
+    server_.GetBattleManager().RemoveBattle(partyId);
+    if (party) {
+        party->SetStatus(PartyStatus::Waiting);
+        partyHandler_.BroadcastPartyState(partyId);   // 남은 파티원이 대기실 명단을 다시 받음
+    }
+    server_.GetLobbyBroadcaster().Invalidate();
+
+    std::cout << "[ABORT_VOTE] partyId=" << partyId << " 전투 정리 후 대기 상태로 복귀" << std::endl;
+}
+
 void CommandDispatcher::UpdateAbortVotes(uint32_t dtMs)
 {
+    // 집계하면 전투를 지울 수 있으므로, 만료된 파티는 순회가 끝난 뒤에 처리
+    std::vector<PartyId> expired;
+
     for (auto& entry : server_.GetBattleManager().Battles()) {
         BattleInstance& battle = *entry.second;
         if (!battle.IsVoteActive()) continue;
@@ -419,12 +511,11 @@ void CommandDispatcher::UpdateAbortVotes(uint32_t dtMs)
         }
 
         battle.UpdateVote(dtMs);
-        if (battle.IsVoteExpired()) {
-            // 여기서 TallyVote로 집계하고 ABORT_VOTE_RESULT를 보낸 뒤, 가결이면 전투를 정리하고 대기창으로 복귀
-            std::cout << "[ABORT_VOTE] partyId=" << entry.first << " 제한 시간 만료 (집계와 결과 전송은 아직 미구현)" << std::endl;
-            battle.CancelVote();
-        }
+        if (battle.IsVoteExpired()) expired.push_back(entry.first);
     }
+
+    // 시간이 만료되면 응답하지 않은 사람은 재개로 보고 집계
+    for (PartyId partyId : expired) ResolveAbortVote(partyId);
 }
 
 void CommandDispatcher::HandleMarkerRequest(const Command& cmd)
@@ -564,4 +655,4 @@ void CommandDispatcher::HandleDisconnected(int sessionId)
     playerToSession_.erase(pid);
     players_.erase(pid);
     server_.GetLobbyBroadcaster().Invalidate();
-}   
+}
